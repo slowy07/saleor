@@ -1,10 +1,11 @@
 import itertools
 import uuid
-from typing import Set
+from typing import Iterable, Optional, Set
 
 from django.db import models
 from django.db.models import Exists, F, OuterRef, Sum
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 from ..account.models import Address
 from ..channel.models import Channel
@@ -160,6 +161,17 @@ class Allocation(models.Model):
         ordering = ("pk",)
 
 
+class ReservationQuerySet(models.QuerySet):
+    def not_expired(self):
+        return self.filter(reserved_until__gt=timezone.now())
+
+    def exclude_checkout_lines(self, checkout_lines: Optional[Iterable[CheckoutLine]]):
+        if checkout_lines:
+            return self.exclude(checkout_line__in=checkout_lines)
+
+        return self
+
+
 class Reservation(models.Model):
     checkout_line = models.ForeignKey(
         CheckoutLine,
@@ -177,6 +189,8 @@ class Reservation(models.Model):
     )
     quantity_reserved = models.PositiveIntegerField(default=0)
     reserved_until = models.DateTimeField()
+
+    objects = ReservationQuerySet.as_manager()
 
     class Meta:
         unique_together = [["checkout_line", "stock"]]

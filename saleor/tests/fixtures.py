@@ -273,6 +273,11 @@ def checkout_with_item(checkout, product):
 
 
 @pytest.fixture
+def checkout_line(checkout_with_item):
+    return checkout_with_item.lines.first()
+
+
+@pytest.fixture
 def checkouts_list(channel_USD, channel_PLN):
     checkouts_usd = Checkout.objects.bulk_create(
         [

@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 @dataclass
 class InsufficientStockData:
     variant: "ProductVariant"
+    checkout_line: Optional["OrderLine"] = None
     order_line: Optional["OrderLine"] = None
     warehouse_pk: Union[str, int, None] = None
     available_quantity: Optional[int] = None
