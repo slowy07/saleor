@@ -20,7 +20,9 @@ StockData = namedtuple("StockData", ["pk", "quantity"])
 
 
 @transaction.atomic
-def reserve_stocks(checkout_lines_info: Iterable["CheckoutLineInfo"], country_code: str):
+def reserve_stocks(
+    checkout_lines_info: Iterable["CheckoutLineInfo"], country_code: str
+):
     """Reserve stocks for given `checkout_lines` in given country."""
     # Reservation is only applied to checkout lines with variants with track inventory
     # set to True
@@ -123,7 +125,10 @@ def _create_reservations(
         )
 
         quantity_available_in_stock = max(
-            stock_data.quantity - quantity_allocated_in_stock - quantity_reserved_in_stock, 0
+            stock_data.quantity
+            - quantity_allocated_in_stock
+            - quantity_reserved_in_stock,
+            0,
         )
 
         quantity_to_reserve = min(

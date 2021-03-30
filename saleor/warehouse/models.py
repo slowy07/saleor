@@ -195,7 +195,7 @@ class Reservation(models.Model):
     class Meta:
         unique_together = [["checkout_line", "stock"]]
         indexes = [
-            models.Index(fields=['checkout_line', 'reserved_until']),
+            models.Index(fields=["checkout_line", "reserved_until"]),
         ]
 
         ordering = ("pk",)

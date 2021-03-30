@@ -13,7 +13,9 @@ if TYPE_CHECKING:
     from ..product.models import Product, ProductVariant
 
 
-def _get_available_quantity(stocks: StockQuerySet, checkout_lines: Optional[List["CheckoutLine"]] = None) -> int:
+def _get_available_quantity(
+    stocks: StockQuerySet, checkout_lines: Optional[List["CheckoutLine"]] = None
+) -> int:
     results = stocks.aggregate(
         total_quantity=Coalesce(Sum("quantity", distinct=True), 0),
         quantity_allocated=Coalesce(Sum("allocations__quantity_allocated"), 0),
@@ -103,11 +105,18 @@ def is_product_in_stock(
     return any(stocks.values_list("available_quantity", flat=True))
 
 
-def get_reserved_quantity(stocks: StockQuerySet, checkout_lines: Optional[List["CheckoutLine"]] = None) -> int:
-    result = Reservation.objects.filter(
-        stock__in=stocks,
-    ).not_expired().exclude_checkout_lines(checkout_lines).aggregate(
-        quantity_reserved=Coalesce(Sum("quantity_reserved"), 0),
+def get_reserved_quantity(
+    stocks: StockQuerySet, checkout_lines: Optional[List["CheckoutLine"]] = None
+) -> int:
+    result = (
+        Reservation.objects.filter(
+            stock__in=stocks,
+        )
+        .not_expired()
+        .exclude_checkout_lines(checkout_lines)
+        .aggregate(
+            quantity_reserved=Coalesce(Sum("quantity_reserved"), 0),
+        )
     )
 
     return result["quantity_reserved"]
