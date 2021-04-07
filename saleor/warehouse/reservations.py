@@ -11,7 +11,7 @@ from ..product.models import ProductVariant
 from .models import Allocation, Reservation, Stock, Warehouse
 
 if TYPE_CHECKING:
-    from ..checkout.fetch import CheckoutLineInfo
+    from ..checkout.models import CheckoutLine
 
 
 RESERVATION_TTL = timedelta(seconds=15 * 60)
@@ -20,21 +20,15 @@ StockData = namedtuple("StockData", ["pk", "quantity"])
 
 
 @transaction.atomic
-def reserve_stocks(
-    checkout_lines_info: Iterable["CheckoutLineInfo"], country_code: str
-):
+def reserve_stocks(checkout_lines: Iterable["CheckoutLine"], country_code: str):
     """Reserve stocks for given `checkout_lines` in given country."""
     # Reservation is only applied to checkout lines with variants with track inventory
     # set to True
-    checkout_lines_info = get_checkout_lines_with_track_inventory(checkout_lines_info)
-    if not checkout_lines_info:
+    checkout_lines = get_checkout_lines_with_track_inventory(checkout_lines)
+    if not checkout_lines:
         return
 
-    checkout_lines = []
-    variants = []
-    for line_info in checkout_lines_info:
-        checkout_lines.append(line_info.line)
-        variants.append(line_info.variant)
+    variants = [line.variant for line in checkout_lines]
 
     stocks = list(
         Stock.objects.select_for_update(of=("self",))
@@ -85,11 +79,11 @@ def reserve_stocks(
 
     insufficient_stock: List[InsufficientStockData] = []
     reservations: List[Reservation] = []
-    for line_info in checkout_lines_info:
-        line_info.variant = cast(ProductVariant, line_info.variant)
-        stock_reservations = variant_to_stocks[line_info.variant.pk]
+    for line in checkout_lines:
+        line.variant = cast(ProductVariant, line.variant)
+        stock_reservations = variant_to_stocks[line.variant.pk]
         insufficient_stock, allocation_items = _create_reservations(
-            line_info,
+            line,
             stock_reservations,
             quantity_allocation_for_stocks,
             quantity_reservation_for_stocks,
@@ -107,13 +101,13 @@ def reserve_stocks(
 
 
 def _create_reservations(
-    line_info: "CheckoutLineInfo",
+    line: "CheckoutLine",
     stocks: List[StockData],
     quantity_allocation_for_stocks: dict,
     quantity_reservation_for_stocks: dict,
     insufficient_stock: List[InsufficientStockData],
 ):
-    quantity = line_info.line.quantity
+    quantity = line.quantity
     quantity_reserved = 0
     reservations = []
     for stock_data in stocks:
@@ -135,11 +129,9 @@ def _create_reservations(
             (quantity - quantity_reserved), quantity_available_in_stock
         )
         if quantity_to_reserve > 0:
-            print("reservation stock", stock_data.pk)
-            print("reservation line", line_info.line.pk)
             reservations.append(
                 Reservation(
-                    checkout_line=line_info.line,
+                    checkout_line=line,
                     stock_id=stock_data.pk,
                     quantity_reserved=quantity_to_reserve,
                     reserved_until=_get_expiration_datetime(),
@@ -153,22 +145,20 @@ def _create_reservations(
     if not quantity_reserved == quantity:
         insufficient_stock.append(
             InsufficientStockData(
-                variant=line_info.variant, checkout_line=line_info.line  # type: ignore
+                variant=line.variant, checkout_line=line  # type: ignore
             )
         )
         return insufficient_stock, []
 
 
 def get_checkout_lines_with_track_inventory(
-    checkout_lines_info: Iterable["CheckoutLineInfo"],
-) -> Iterable["OrderLineData"]:
+    checkout_lines: Iterable["CheckoutLine"],
+) -> Iterable["CheckoutLine"]:
     """Return order lines with variants with track inventory set to True."""
     return [
-        line_info
-        for line_info in checkout_lines_info
-        if line_info.variant and line_info.variant.track_inventory
+        line for line in checkout_lines if line.variant and line.variant.track_inventory
     ]
 
 
 def _get_expiration_datetime():
-    return timezone.now() - RESERVATION_TTL
+    return timezone.now() + RESERVATION_TTL

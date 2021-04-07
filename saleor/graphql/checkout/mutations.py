@@ -37,6 +37,7 @@ from ...product import models as product_models
 from ...product.models import ProductChannelListing
 from ...shipping import models as shipping_models
 from ...warehouse.availability import check_stock_quantity_bulk
+from ...warehouse.reservations import reserve_stocks
 from ..account.i18n import I18nMixin
 from ..account.types import AddressInput
 from ..channel.utils import clean_channel
@@ -368,6 +369,7 @@ class CheckoutCreate(ModelMutation, I18nMixin):
         if variants and quantities:
             try:
                 add_variants_to_checkout(instance, variants, quantities, channel.slug)
+                reserve_stocks(checkout.lines, country)
             except InsufficientStock as exc:
                 error = prepare_insufficient_stock_checkout_validation_error(exc)
                 raise ValidationError({"lines": error})
