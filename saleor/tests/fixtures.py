@@ -1,6 +1,7 @@
 import datetime
 import uuid
 from contextlib import contextmanager
+from datetime import timedelta
 from decimal import Decimal
 from functools import partial
 from io import BytesIO
@@ -102,7 +103,7 @@ from ..shipping.models import (
     ShippingZone,
 )
 from ..site.models import SiteSettings
-from ..warehouse.models import Allocation, Stock, Warehouse
+from ..warehouse.models import Allocation, Reservation, Stock, Warehouse
 from ..webhook.event_types import WebhookEventType
 from ..webhook.models import Webhook, WebhookEvent
 from ..wishlist.models import Wishlist
@@ -2416,6 +2417,49 @@ def order_line_with_one_allocation(
     )
 
     return order_line
+
+
+@pytest.fixture
+def checkout_line_with_reservation_in_many_stocks(
+    customer_user, variant_with_many_stocks, channel_USD, checkout
+):
+    address = customer_user.default_billing_address.get_copy()
+    variant = variant_with_many_stocks
+    stocks = variant.stocks.all().order_by("pk")
+    checkout_line = checkout.lines.create(
+        variant=variant,
+        quantity=3,
+    )
+
+    reserved_until = timezone.now() + timedelta(minutes=5)
+
+    Reservation.objects.bulk_create(
+        [
+            Reservation(checkout_line=checkout_line, stock=stocks[0], quantity_reserved=2, reserved_until=reserved_until),
+            Reservation(checkout_line=checkout_line, stock=stocks[1], quantity_reserved=1, reserved_until=reserved_until),
+        ]
+    )
+
+    return checkout_line
+
+
+@pytest.fixture
+def checkout_line_with_one_reservation(
+    customer_user, variant_with_many_stocks, channel_USD, checkout
+):
+    address = customer_user.default_billing_address.get_copy()
+    variant = variant_with_many_stocks
+    stocks = variant.stocks.all().order_by("pk")
+    checkout_line = checkout.lines.create(
+        variant=variant,
+        quantity=2,
+    )
+
+    reserved_until = timezone.now() + timedelta(minutes=5)
+
+    Reservation.objects.create(checkout_line=checkout_line, stock=stocks[0], quantity_reserved=2, reserved_until=reserved_until)
+
+    return checkout_line
 
 
 @pytest.fixture

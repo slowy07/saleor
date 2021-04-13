@@ -55,6 +55,7 @@ def check_stock_quantity_bulk(
     country_code: str,
     quantities: Iterable[int],
     channel_slug: str,
+    checkout_lines: Optional[List["CheckoutLine"]] = None,
 ):
     """Validate if there is stock available for given variants in given country.
 
@@ -70,11 +71,18 @@ def check_stock_quantity_bulk(
     for stock in all_variants_stocks:
         variant_stocks[stock.product_variant_id].append(stock)
 
+    variant_reservations = get_reserved_quantity_bulk(
+        all_variants_stocks, checkout_lines
+    )
+
     insufficient_stocks: List[InsufficientStockData] = []
     for variant, quantity in zip(variants, quantities):
         stocks = variant_stocks.get(variant.pk, [])
         available_quantity = sum(
             [stock.available_quantity for stock in stocks]  # type: ignore
+        )
+        available_quantity = max(
+            available_quantity - variant_reservations[variant.pk], 0
         )
 
         if not stocks:
@@ -132,3 +140,31 @@ def get_reserved_quantity(
     )
 
     return result["quantity_reserved"]
+
+
+def get_reserved_quantity_bulk(
+    stocks: Iterable[Stock], checkout_lines: Optional[List["CheckoutLine"]] = None
+) -> Dict[int, int]:
+    reservations = defaultdict(int)
+    if not stocks:
+        return reservations
+
+    result = (
+        Reservation.objects.filter(
+            stock__in=stocks,
+        )
+        .not_expired()
+        .exclude_checkout_lines(checkout_lines)
+        .values("stock_id")
+        .annotate(
+            quantity_reserved=Coalesce(Sum("quantity_reserved"), 0),
+        )
+    )
+
+    stocks_variants = {stock.id: stock.product_variant_id for stock in stocks}
+    for stock_reservations in result:
+        variant_id = stocks_variants.get(stock_reservations["stock_id"])
+        if variant_id:
+            reservations[variant_id] += stock_reservations["quantity_reserved"]
+
+    return reservations
