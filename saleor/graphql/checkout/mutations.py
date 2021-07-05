@@ -375,7 +375,6 @@ class CheckoutCreate(ModelMutation, I18nMixin):
         if variants and quantities:
             try:
                 add_variants_to_checkout(instance, variants, quantities, channel.slug)
-                reserve_stocks(checkout.lines, country)
             except InsufficientStock as exc:
                 error = prepare_insufficient_stock_checkout_validation_error(exc)
                 raise ValidationError({"lines": error})

@@ -20,7 +20,7 @@ StockData = namedtuple("StockData", ["pk", "quantity"])
 
 
 @transaction.atomic
-def reserve_stocks(checkout_lines: Iterable["CheckoutLine"], country_code: str, *, replace=True):
+def reserve_stocks(checkout_lines: Iterable["CheckoutLine"], country_code: str, channel_slug: str, *, replace=True):
     """Reserve stocks for given `checkout_lines` in given country."""
     # Reservation is only applied to checkout lines with variants with track inventory
     # set to True
@@ -32,8 +32,7 @@ def reserve_stocks(checkout_lines: Iterable["CheckoutLine"], country_code: str, 
 
     stocks = list(
         Stock.objects.select_for_update(of=("self",))
-        .for_country(country_code)
-        .filter(product_variant__in=variants)
+        .get_variants_stocks_for_country(country_code, channel_slug, variants)
         .order_by("pk")
         .values("id", "product_variant", "pk", "quantity")
     )

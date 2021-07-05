@@ -106,10 +106,13 @@ def check_stock_quantity_bulk(
 def get_available_quantity(
     variant: "ProductVariant",
     country_code: str,
+    channel_slug: str,
     checkout_lines: Optional[List["CheckoutLine"]] = None,
 ) -> int:
     """Return available quantity for given product in given country."""
-    stocks = Stock.objects.get_variant_stocks_for_country(country_code, variant)
+    stocks = Stock.objects.get_variant_stocks_for_country(
+        country_code, channel_slug, variant
+    )
     if not stocks:
         return 0
     return _get_available_quantity(stocks, checkout_lines)

@@ -664,9 +664,6 @@ def test_checkout_create_with_reservation(
     response = api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
     content = get_graphql_content(response)["data"]["checkoutCreate"]
 
-    # Look at the flag to see whether a new checkout was created or not
-    assert content["created"] is True
-
     new_checkout = Checkout.objects.first()
     assert new_checkout.lines.count() == 1
     checkout_line = new_checkout.lines.first()

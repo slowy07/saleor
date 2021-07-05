@@ -92,6 +92,8 @@ def add_variant_to_checkout(
     of added to.
     """
     checkout = checkout_info.checkout
+    channel_slug = checkout_info.channel.slug
+
     product_channel_listing = product_models.ProductChannelListing.objects.filter(
         channel_id=checkout.channel_id, product_id=variant.product_id
     ).first()
@@ -101,7 +103,7 @@ def add_variant_to_checkout(
     new_quantity, line = check_variant_in_stock(
         checkout,
         variant,
-        checkout_info.channel.slug,
+        channel_slug,
         quantity=quantity,
         replace=replace,
         check_quantity=check_quantity,
@@ -121,7 +123,7 @@ def add_variant_to_checkout(
         line.save(update_fields=["quantity"])
 
     if reserve_stock and line:
-        reserve_stocks([line], checkout.get_country())
+        reserve_stocks([line], checkout.get_country(), channel_slug)
 
     return checkout
 
@@ -183,11 +185,10 @@ def add_variants_to_checkout(
     if to_create:
         CheckoutLine.objects.bulk_create(to_create)
 
-        lines.append(
-            CheckoutLine(checkout=checkout, variant=variant, quantity=quantity)
-        )
+    to_reserve = to_create + to_update
+    if to_reserve:
+        reserve_stocks(to_reserve, country_code, channel_slug, replace=False)
 
-    reserve_stocks(to_create + to_update, country_code, replace=False)
     return checkout
 
 
