@@ -20,7 +20,7 @@ StockData = namedtuple("StockData", ["pk", "quantity"])
 
 
 @transaction.atomic
-def reserve_stocks(checkout_lines: Iterable["CheckoutLine"], country_code: str):
+def reserve_stocks(checkout_lines: Iterable["CheckoutLine"], country_code: str, *, replace=True):
     """Reserve stocks for given `checkout_lines` in given country."""
     # Reservation is only applied to checkout lines with variants with track inventory
     # set to True
@@ -95,7 +95,7 @@ def reserve_stocks(checkout_lines: Iterable["CheckoutLine"], country_code: str):
         raise InsufficientStock(insufficient_stock)
 
     if reservations:
-        if checkout_lines:
+        if replace:
             Reservation.objects.filter(checkout_line__in=checkout_lines).delete()
         Reservation.objects.bulk_create(reservations)
 

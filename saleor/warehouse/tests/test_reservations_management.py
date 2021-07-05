@@ -29,6 +29,14 @@ def test_reserve_stocks(checkout_line):
     assert reservation.reserved_until > timezone.now() + timedelta(minutes=1)
 
 
+def test_stocks_reservation_skips_prev_stocks_delete_if_replace_is_disabled(checkout_line, assert_num_queries):
+    with assert_num_queries(3):
+        reserve_stocks([checkout_line], COUNTRY_CODE, replace=False)
+
+    with assert_num_queries(4):
+        reserve_stocks([checkout_line], COUNTRY_CODE)
+
+
 def test_multiple_stocks_are_reserved_if_single_stock_is_not_enough(
     checkout_line, warehouse, shipping_zone
 ):

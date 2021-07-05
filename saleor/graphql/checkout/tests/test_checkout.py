@@ -9,6 +9,7 @@ import graphene
 import pytest
 from django.core.exceptions import ValidationError
 from django.test import override_settings
+from django.utils import timezone
 from django_countries.fields import Country
 from measurement.measures import Weight
 from prices import Money, TaxedMoney
@@ -31,8 +32,12 @@ from ....plugins.manager import PluginsManager, get_plugins_manager
 from ....plugins.tests.sample_plugins import ActiveDummyPaymentGateway
 from ....product.models import ProductChannelListing, ProductVariant
 from ....shipping import models as shipping_models
-from ....warehouse.models import Stock
-from ...tests.utils import assert_no_permission, get_graphql_content
+from ....warehouse.models import Reservation, Stock
+from ...tests.utils import (
+    assert_no_permission,
+    get_graphql_content,
+    get_graphql_content_from_response,
+)
 from ..mutations import (
     clean_shipping_method,
     update_checkout_shipping_method_if_invalid,
@@ -638,6 +643,39 @@ def test_checkout_create_multiple_warehouse(
     checkout_line = new_checkout.lines.first()
     assert checkout_line.variant == variant
     assert checkout_line.quantity == 4
+
+
+def test_checkout_create_with_reservation(
+    api_client, variant_with_many_stocks, graphql_address_data, channel_USD
+):
+    variant = variant_with_many_stocks
+    variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
+    test_email = "test@example.com"
+    shipping_address = graphql_address_data
+    variables = {
+        "checkoutInput": {
+            "channel": channel_USD.slug,
+            "lines": [{"quantity": 4, "variantId": variant_id}],
+            "email": test_email,
+            "shippingAddress": shipping_address,
+        }
+    }
+    assert not Checkout.objects.exists()
+    response = api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
+    content = get_graphql_content(response)["data"]["checkoutCreate"]
+
+    # Look at the flag to see whether a new checkout was created or not
+    assert content["created"] is True
+
+    new_checkout = Checkout.objects.first()
+    assert new_checkout.lines.count() == 1
+    checkout_line = new_checkout.lines.first()
+    assert checkout_line
+    reservation = checkout_line.reservations.first()
+    assert reservation
+    assert reservation.checkout_line == checkout_line
+    assert reservation.quantity_reserved == checkout_line.quantity
+    assert reservation.reserved_until > timezone.now()
 
 
 def test_checkout_create_with_null_as_addresses(api_client, stock, channel_USD):

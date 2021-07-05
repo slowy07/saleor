@@ -123,6 +123,15 @@ def test_get_available_quantity_with_reservations(
     assert available_quantity == 2
 
 
+def test_get_available_quantity_with_allocations_and_reservations(
+    variant_with_many_stocks,
+    order_line_with_one_allocation,
+    checkout_line_with_one_reservation,
+):
+    available_quantity = get_available_quantity(variant_with_many_stocks, COUNTRY_CODE)
+    assert available_quantity == 4
+
+
 def test_get_available_quantity_with_reservations_excluding_given_checkout_lines(
     variant_with_many_stocks,
     checkout_line_with_reservation_in_many_stocks,

@@ -28,6 +28,7 @@ from ..plugins.manager import PluginsManager
 from ..product import models as product_models
 from ..shipping.models import ShippingMethod
 from ..warehouse.availability import check_stock_quantity, check_stock_quantity_bulk
+from ..warehouse.reservations import reserve_stocks
 from . import AddressType, calculations
 from .error_codes import CheckoutErrorCode
 from .fetch import (
@@ -83,6 +84,7 @@ def add_variant_to_checkout(
     quantity: int = 1,
     replace: bool = False,
     check_quantity: bool = True,
+    reserve_stock: bool = False,
 ):
     """Add a product variant to checkout.
 
@@ -111,11 +113,15 @@ def add_variant_to_checkout(
     if new_quantity == 0:
         if line is not None:
             line.delete()
+            line = None
     elif line is None:
-        checkout.lines.create(checkout=checkout, variant=variant, quantity=new_quantity)
+        line = checkout.lines.create(checkout=checkout, variant=variant, quantity=new_quantity)
     elif new_quantity > 0:
         line.quantity = new_quantity
         line.save(update_fields=["quantity"])
+
+    if reserve_stock and line:
+        reserve_stocks([line], checkout.get_country())
 
     return checkout
 
@@ -176,6 +182,12 @@ def add_variants_to_checkout(
         CheckoutLine.objects.bulk_update(to_update, ["quantity"])
     if to_create:
         CheckoutLine.objects.bulk_create(to_create)
+
+        lines.append(
+            CheckoutLine(checkout=checkout, variant=variant, quantity=quantity)
+        )
+
+    reserve_stocks(to_create + to_update, country_code, replace=False)
     return checkout
 
 

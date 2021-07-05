@@ -37,7 +37,6 @@ from ...product import models as product_models
 from ...product.models import ProductChannelListing
 from ...shipping import models as shipping_models
 from ...warehouse.availability import check_stock_quantity_bulk
-from ...warehouse.reservations import reserve_stocks
 from ..account.i18n import I18nMixin
 from ..account.types import AddressInput
 from ..channel.utils import clean_channel
@@ -118,7 +117,12 @@ def update_checkout_shipping_method_if_invalid(
 
 
 def check_lines_quantity(
-    variants, quantities, country, channel_slug, allow_zero_quantity=False
+    variants,
+    quantities,
+    country,
+    channel_slug,
+    allow_zero_quantity=False,
+    checkout_lines=None,
 ):
     """Clean quantities and check if stock is sufficient for each checkout line.
 
@@ -160,7 +164,9 @@ def check_lines_quantity(
                 }
             )
     try:
-        check_stock_quantity_bulk(variants, country, quantities, channel_slug)
+        check_stock_quantity_bulk(
+            variants, country, quantities, channel_slug, checkout_lines
+        )
     except InsufficientStock as e:
         errors = [
             ValidationError(
