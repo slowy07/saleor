@@ -55,7 +55,7 @@ def check_stock_quantity_bulk(
     country_code: str,
     quantities: Iterable[int],
     channel_slug: str,
-    checkout_lines: Optional[List["CheckoutLine"]] = None,
+    current_checkout_lines: Optional[List["CheckoutLine"]] = None,
 ):
     """Validate if there is stock available for given variants in given country.
 
@@ -72,7 +72,7 @@ def check_stock_quantity_bulk(
         variant_stocks[stock.product_variant_id].append(stock)
 
     variant_reservations = get_reserved_quantity_bulk(
-        all_variants_stocks, checkout_lines
+        all_variants_stocks, current_checkout_lines
     )
 
     insufficient_stocks: List[InsufficientStockData] = []
@@ -107,7 +107,7 @@ def get_available_quantity(
     variant: "ProductVariant",
     country_code: str,
     channel_slug: str,
-    checkout_lines: Optional[List["CheckoutLine"]] = None,
+    current_checkout_lines: Optional[List["CheckoutLine"]] = None,
 ) -> int:
     """Return available quantity for given product in given country."""
     stocks = Stock.objects.get_variant_stocks_for_country(
@@ -115,7 +115,7 @@ def get_available_quantity(
     )
     if not stocks:
         return 0
-    return _get_available_quantity(stocks, checkout_lines)
+    return _get_available_quantity(stocks, current_checkout_lines)
 
 
 def is_product_in_stock(
@@ -129,14 +129,14 @@ def is_product_in_stock(
 
 
 def get_reserved_quantity(
-    stocks: StockQuerySet, checkout_lines: Optional[List["CheckoutLine"]] = None
+    stocks: StockQuerySet, current_checkout_lines: Optional[List["CheckoutLine"]] = None
 ) -> int:
     result = (
         Reservation.objects.filter(
             stock__in=stocks,
         )
         .not_expired()
-        .exclude_checkout_lines(checkout_lines)
+        .exclude_checkout_lines(current_checkout_lines)
         .aggregate(
             quantity_reserved=Coalesce(Sum("quantity_reserved"), 0),
         )
@@ -146,7 +146,7 @@ def get_reserved_quantity(
 
 
 def get_reserved_quantity_bulk(
-    stocks: Iterable[Stock], checkout_lines: Optional[List["CheckoutLine"]] = None
+    stocks: Iterable[Stock], current_checkout_lines: Optional[List["CheckoutLine"]] = None
 ) -> Dict[int, int]:
     reservations = defaultdict(int)
     if not stocks:
@@ -157,7 +157,7 @@ def get_reserved_quantity_bulk(
             stock__in=stocks,
         )
         .not_expired()
-        .exclude_checkout_lines(checkout_lines)
+        .exclude_checkout_lines(current_checkout_lines)
         .values("stock_id")
         .annotate(
             quantity_reserved=Coalesce(Sum("quantity_reserved"), 0),

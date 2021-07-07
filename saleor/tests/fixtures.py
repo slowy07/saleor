@@ -2421,7 +2421,7 @@ def order_line_with_one_allocation(
 
 @pytest.fixture
 def checkout_line_with_reservation_in_many_stocks(
-    customer_user, variant_with_many_stocks, channel_USD, checkout
+    customer_user, variant_with_many_stocks, checkout
 ):
     address = customer_user.default_billing_address.get_copy()
     variant = variant_with_many_stocks
@@ -2445,7 +2445,7 @@ def checkout_line_with_reservation_in_many_stocks(
 
 @pytest.fixture
 def checkout_line_with_one_reservation(
-    customer_user, variant_with_many_stocks, channel_USD, checkout
+    customer_user, variant_with_many_stocks, checkout
 ):
     address = customer_user.default_billing_address.get_copy()
     variant = variant_with_many_stocks

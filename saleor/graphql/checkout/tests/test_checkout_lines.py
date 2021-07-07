@@ -9,6 +9,7 @@ from ....checkout.fetch import fetch_checkout_info, fetch_checkout_lines
 from ....checkout.utils import calculate_checkout_quantity
 from ....plugins.manager import get_plugins_manager
 from ....product.models import ProductChannelListing
+from ....warehouse.models import Reservation
 from ...tests.utils import get_graphql_content
 from ..mutations import update_checkout_shipping_method_if_invalid
 
@@ -65,6 +66,11 @@ def test_checkout_lines_add(
     assert line.variant == variant
     assert line.quantity == 1
     assert calculate_checkout_quantity(lines) == 4
+
+    reservation = line.reservations.first()
+    assert reservation
+    assert reservation.checkout_line == line
+    assert reservation.quantity_reserved == line.quantity
 
     manager = get_plugins_manager()
     lines = fetch_checkout_lines(checkout)
@@ -420,6 +426,54 @@ def test_checkout_lines_update(
     mocked_update_shipping_method.assert_called_once_with(checkout_info, lines)
 
 
+@mock.patch(
+    "saleor.graphql.checkout.mutations.update_checkout_shipping_method_if_invalid",
+    wraps=update_checkout_shipping_method_if_invalid,
+)
+def test_checkout_lines_update_with_new_reservations(
+    mocked_update_shipping_method,
+    user_api_client,
+    checkout_line_with_reservation_in_many_stocks
+):
+    assert Reservation.objects.count() == 2
+    checkout = checkout_line_with_reservation_in_many_stocks.checkout
+    lines = fetch_checkout_lines(checkout)
+    assert checkout.lines.count() == 1
+    assert calculate_checkout_quantity(lines) == 3
+    line = checkout.lines.first()
+    variant = line.variant
+    assert line.quantity == 3
+
+    variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
+
+    variables = {
+        "token": checkout.token,
+        "lines": [{"variantId": variant_id, "quantity": 1}],
+    }
+    response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_UPDATE, variables)
+    content = get_graphql_content(response)
+
+    data = content["data"]["checkoutLinesUpdate"]
+    assert not data["errors"]
+    checkout.refresh_from_db()
+    lines = fetch_checkout_lines(checkout)
+    assert checkout.lines.count() == 1
+    line = checkout.lines.first()
+    assert line.variant == variant
+    assert line.quantity == 1
+    assert calculate_checkout_quantity(lines) == 1
+
+    reservation = checkout_line_with_reservation_in_many_stocks.reservations.first()
+    assert reservation.quantity_reserved == line.quantity
+
+    assert Reservation.objects.count() == 1
+
+    manager = get_plugins_manager()
+    lines = fetch_checkout_lines(checkout)
+    checkout_info = fetch_checkout_info(checkout, lines, [], manager)
+    mocked_update_shipping_method.assert_called_once_with(checkout_info, lines)
+
+
 def test_checkout_lines_update_with_unavailable_variant(
     user_api_client, checkout_with_item
 ):
@@ -608,9 +662,10 @@ MUTATION_CHECKOUT_LINES_DELETE = """
     wraps=update_checkout_shipping_method_if_invalid,
 )
 def test_checkout_line_delete(
-    mocked_update_shipping_method, user_api_client, checkout_with_item
+    mocked_update_shipping_method, user_api_client, checkout_line_with_reservation_in_many_stocks
 ):
-    checkout = checkout_with_item
+    assert Reservation.objects.count() == 2
+    checkout = checkout_line_with_reservation_in_many_stocks.checkout
     lines = fetch_checkout_lines(checkout)
     assert calculate_checkout_quantity(lines) == 3
     assert checkout.lines.count() == 1
@@ -629,6 +684,7 @@ def test_checkout_line_delete(
     lines = fetch_checkout_lines(checkout)
     assert checkout.lines.count() == 0
     assert calculate_checkout_quantity(lines) == 0
+    assert Reservation.objects.count() == 0
     manager = get_plugins_manager()
     checkout_info = fetch_checkout_info(checkout, lines, [], manager)
     mocked_update_shipping_method.assert_called_once_with(checkout_info, lines)

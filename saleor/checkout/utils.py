@@ -133,7 +133,13 @@ def calculate_checkout_quantity(lines: Iterable["CheckoutLineInfo"]):
 
 
 def add_variants_to_checkout(
-    checkout, variants, quantities, channel_slug, skip_stock_check=False, replace=False
+    checkout,
+    variants,
+    quantities,
+    channel_slug,
+    skip_stock_check=False,
+    replace=False,
+    replace_reservations=False,
 ):
     """Add variants to checkout.
 
@@ -187,7 +193,12 @@ def add_variants_to_checkout(
 
     to_reserve = to_create + to_update
     if to_reserve:
-        reserve_stocks(to_reserve, country_code, channel_slug, replace=False)
+        reserve_stocks(
+            to_reserve,
+            country_code,
+            channel_slug,
+            replace=replace_reservations,
+        )
 
     return checkout
 

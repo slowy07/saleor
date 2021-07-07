@@ -20,11 +20,17 @@ StockData = namedtuple("StockData", ["pk", "quantity"])
 
 
 @transaction.atomic
-def reserve_stocks(checkout_lines: Iterable["CheckoutLine"], country_code: str, channel_slug: str, *, replace=True):
+def reserve_stocks(
+    checkout_lines: Iterable["CheckoutLine"],
+    country_code: str,
+    channel_slug: str,
+    *,
+    replace=True,
+):
     """Reserve stocks for given `checkout_lines` in given country."""
     # Reservation is only applied to checkout lines with variants with track inventory
     # set to True
-    checkout_lines = get_checkout_lines_with_track_inventory(checkout_lines)
+    checkout_lines = get_checkout_lines_to_reserve(checkout_lines)
     if not checkout_lines:
         return
 
@@ -149,14 +155,18 @@ def _create_reservations(
         )
         return insufficient_stock, []
 
+    return [], []
 
-def get_checkout_lines_with_track_inventory(
+
+def get_checkout_lines_to_reserve(
     checkout_lines: Iterable["CheckoutLine"],
 ) -> Iterable["CheckoutLine"]:
-    """Return order lines with variants with track inventory set to True."""
-    return [
-        line for line in checkout_lines if line.variant and line.variant.track_inventory
-    ]
+    """Return order lines which can be reserved."""
+    valid_lines = []
+    for line in checkout_lines:
+        if line.quantity and line.variant and line.variant.track_inventory:
+            valid_lines.append(line)
+    return valid_lines
 
 
 def _get_expiration_datetime():

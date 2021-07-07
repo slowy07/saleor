@@ -17,7 +17,8 @@ from ....payment import ChargeStatus, PaymentError, TransactionKind
 from ....payment.gateways.dummy_credit_card import TOKEN_VALIDATION_MAPPING
 from ....payment.interface import GatewayResponse
 from ....plugins.manager import PluginsManager, get_plugins_manager
-from ....warehouse.models import Stock
+from ....warehouse.models import Reservation, Stock
+from ....warehouse.reservations import _get_expiration_datetime
 from ....warehouse.tests.utils import get_available_quantity_for_stock
 from ...tests.utils import get_graphql_content
 
@@ -214,6 +215,13 @@ def test_checkout_complete(
     checkout_line_quantity = checkout_line.quantity
     checkout_line_variant = checkout_line.variant
 
+    reservation = Reservation.objects.create(
+        checkout_line=checkout_line,
+        stock=checkout_line_variant.stocks.first(),
+        quantity_reserved=checkout_line_quantity,
+        reserved_until=_get_expiration_datetime(),
+    )
+
     manager = get_plugins_manager()
     lines = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, [], manager)
@@ -265,6 +273,10 @@ def test_checkout_complete(
     gift_card.refresh_from_db()
     assert gift_card.current_balance == zero_money(gift_card.currency)
     assert gift_card.last_used_on
+
+    assert not Reservation.objects.filter(
+        checkout_line=checkout_line
+    ).exists(), "Stock reserveration should have been deleted"
 
     assert not Checkout.objects.filter(
         pk=checkout.pk

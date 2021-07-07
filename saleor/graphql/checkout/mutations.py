@@ -122,7 +122,7 @@ def check_lines_quantity(
     country,
     channel_slug,
     allow_zero_quantity=False,
-    checkout_lines=None,
+    current_checkout_lines=None,
 ):
     """Clean quantities and check if stock is sufficient for each checkout line.
 
@@ -165,7 +165,7 @@ def check_lines_quantity(
             )
     try:
         check_stock_quantity_bulk(
-            variants, country, quantities, channel_slug, checkout_lines
+            variants, country, quantities, channel_slug, current_checkout_lines
         )
     except InsufficientStock as e:
         errors = [
@@ -447,16 +447,26 @@ class CheckoutLinesAdd(BaseMutation):
         error_type_field = "checkout_errors"
 
     @classmethod
-    def validate_checkout_lines(cls, variants, quantities, country, channel_slug):
-        check_lines_quantity(variants, quantities, country, channel_slug)
+    def validate_checkout_lines(
+        cls, variants, quantities, country, channel_slug, current_checkout_lines
+    ):
+        check_lines_quantity(
+            variants,
+            quantities,
+            country,
+            channel_slug,
+            current_checkout_lines=current_checkout_lines,
+        )
 
     @classmethod
     def clean_input(
         cls, checkout, variants, quantities, checkout_info, manager, discounts, replace
     ):
         channel_slug = checkout_info.channel.slug
+        existing_lines = [l.line for l in fetch_checkout_lines(checkout)]
+
         cls.validate_checkout_lines(
-            variants, quantities, checkout.get_country(), channel_slug
+            variants, quantities, checkout.get_country(), channel_slug, existing_lines
         )
         variants_db_ids = {variant.id for variant in variants}
         validate_variants_available_for_purchase(variants_db_ids, checkout.channel_id)
@@ -475,6 +485,7 @@ class CheckoutLinesAdd(BaseMutation):
                     channel_slug,
                     skip_stock_check=True,  # already checked by validate_checkout_lines
                     replace=replace,
+                    replace_reservations=True,
                 )
             except ProductNotPublished as exc:
                 raise ValidationError(
@@ -542,9 +553,21 @@ class CheckoutLinesUpdate(CheckoutLinesAdd):
         error_type_field = "checkout_errors"
 
     @classmethod
-    def validate_checkout_lines(cls, variants, quantities, country, channel_slug):
+    def validate_checkout_lines(
+        cls,
+        variants,
+        quantities,
+        country,
+        channel_slug,
+        current_checkout_lines,
+    ):
         check_lines_quantity(
-            variants, quantities, country, channel_slug, allow_zero_quantity=True
+            variants,
+            quantities,
+            country,
+            channel_slug,
+            allow_zero_quantity=True,
+            current_checkout_lines=current_checkout_lines,
         )
 
     @classmethod
