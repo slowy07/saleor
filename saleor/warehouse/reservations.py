@@ -6,9 +6,9 @@ from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
-from ..core.exceptions import AllocationError, InsufficientStock, InsufficientStockData
+from ..core.exceptions import InsufficientStock, InsufficientStockData
 from ..product.models import ProductVariant
-from .models import Allocation, Reservation, Stock, Warehouse
+from .models import Allocation, Reservation, Stock
 
 if TYPE_CHECKING:
     from ..checkout.models import CheckoutLine

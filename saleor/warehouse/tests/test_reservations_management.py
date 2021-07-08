@@ -1,13 +1,11 @@
 from datetime import timedelta
 
 import pytest
-from django.db.models import Sum
-from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from ...core.exceptions import InsufficientStock
-from ..reservations import reserve_stocks
 from ..models import Reservation, Stock, Warehouse
+from ..reservations import reserve_stocks
 
 COUNTRY_CODE = "US"
 
@@ -119,7 +117,7 @@ def test_stock_reservation_fails_if_there_is_no_stock(checkout_line, channel_USD
     checkout_line.quantity = 5
     checkout_line.save()
 
-    stock = Stock.objects.all().delete()
+    Stock.objects.all().delete()
 
     with pytest.raises(InsufficientStock):
         reserve_stocks([checkout_line], COUNTRY_CODE, channel_USD.slug)

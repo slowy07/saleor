@@ -662,7 +662,7 @@ def test_checkout_create_with_reservation(
     }
     assert not Checkout.objects.exists()
     response = api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
-    content = get_graphql_content(response)["data"]["checkoutCreate"]
+    get_graphql_content(response)["data"]["checkoutCreate"]
 
     new_checkout = Checkout.objects.first()
     assert new_checkout.lines.count() == 1
@@ -1259,6 +1259,10 @@ def test_checkout_create_query_count_is_constant(
             get_graphql_content(response)["data"]["checkoutCreate"]
             assert Checkout.objects.order_by("pk").last().lines.count() == 1
 
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
+
     # Checkout with multiple lines has same query count as checkout with one
     lines = []
     for i in range(10):
@@ -1291,6 +1295,10 @@ def test_checkout_create_query_count_is_constant(
             response = api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
             get_graphql_content(response)["data"]["checkoutCreate"]
             assert Checkout.objects.order_by("pk").last().lines.count() == 10
+
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 @pytest.fixture
@@ -1902,7 +1910,7 @@ def test_checkout_shipping_address_update_against_reserved_stocks(
         variant=variant,
         quantity=3,
     )
-    reservation = Reservation.objects.create(
+    Reservation.objects.create(
         checkout_line=other_checkout_line,
         stock=variant.stocks.filter(
             warehouse__shipping_zones__countries__contains="US"

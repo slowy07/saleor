@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
 
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
-from django.utils import timezone
 
 from ..core.exceptions import InsufficientStock, InsufficientStockData
 from .models import Reservation, Stock, StockQuerySet

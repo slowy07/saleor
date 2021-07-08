@@ -215,7 +215,7 @@ def test_checkout_complete(
     checkout_line_quantity = checkout_line.quantity
     checkout_line_variant = checkout_line.variant
 
-    reservation = Reservation.objects.create(
+    Reservation.objects.create(
         checkout_line=checkout_line,
         stock=checkout_line_variant.stocks.first(),
         quantity_reserved=checkout_line_quantity,
