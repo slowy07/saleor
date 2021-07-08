@@ -107,7 +107,10 @@ class StockQuerySet(models.QuerySet):
         )
 
     def get_variants_stocks_for_country(
-        self, country_code: str, channel_slug: str, products_variants: Iterable[ProductVariant]
+        self,
+        country_code: str,
+        channel_slug: str,
+        products_variants: Iterable[ProductVariant],
     ):
         """Return the stock information about the a stock for a given country.
 

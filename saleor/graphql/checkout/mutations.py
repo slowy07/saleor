@@ -464,7 +464,9 @@ class CheckoutLinesAdd(BaseMutation):
         cls, checkout, variants, quantities, checkout_info, manager, discounts, replace
     ):
         channel_slug = checkout_info.channel.slug
-        existing_lines = [line_info.line for line_info in fetch_checkout_lines(checkout)]
+        existing_lines = [
+            line_info.line for line_info in fetch_checkout_lines(checkout)
+        ]
 
         cls.validate_checkout_lines(
             variants, quantities, checkout.get_country(), channel_slug, existing_lines

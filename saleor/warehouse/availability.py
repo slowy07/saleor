@@ -145,7 +145,8 @@ def get_reserved_quantity(
 
 
 def get_reserved_quantity_bulk(
-    stocks: Iterable[Stock], current_checkout_lines: Optional[List["CheckoutLine"]] = None
+    stocks: Iterable[Stock],
+    current_checkout_lines: Optional[List["CheckoutLine"]] = None,
 ) -> Dict[int, int]:
     reservations = defaultdict(int)
     if not stocks:

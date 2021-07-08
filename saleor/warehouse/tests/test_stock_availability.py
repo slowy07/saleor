@@ -57,7 +57,12 @@ def test_check_stock_quantity_with_reservations(
     checkout_line_with_one_reservation,
     channel_USD,
 ):
-    assert check_stock_quantity(variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug, 2) is None
+    assert (
+        check_stock_quantity(
+            variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug, 2
+        )
+        is None
+    )
 
 
 def test_check_stock_quantity_with_reservations_excluding_given_checkout_lines(
@@ -132,7 +137,9 @@ def test_get_available_quantity_with_reservations(
     checkout_line_with_one_reservation,
     channel_USD,
 ):
-    available_quantity = get_available_quantity(variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug)
+    available_quantity = get_available_quantity(
+        variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug
+    )
     assert available_quantity == 2
 
 
@@ -142,7 +149,9 @@ def test_get_available_quantity_with_allocations_and_reservations(
     checkout_line_with_one_reservation,
     channel_USD,
 ):
-    available_quantity = get_available_quantity(variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug)
+    available_quantity = get_available_quantity(
+        variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug
+    )
     assert available_quantity == 4
 
 
@@ -166,7 +175,9 @@ def test_get_available_quantity_with_reservations_excluding_given_checkout_lines
 
 def test_get_available_quantity_without_stocks(variant_with_many_stocks, channel_USD):
     variant_with_many_stocks.stocks.all().delete()
-    available_quantity = get_available_quantity(variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug)
+    available_quantity = get_available_quantity(
+        variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug
+    )
     assert available_quantity == 0
 
 
@@ -178,7 +189,10 @@ def test_check_stock_quantity_bulk(variant_with_many_stocks, channel_USD):
     # test that it doesn't raise error for available quantity
     assert (
         check_stock_quantity_bulk(
-            [variant_with_many_stocks], country_code, [available_quantity], channel_USD.slug
+            [variant_with_many_stocks],
+            country_code,
+            [available_quantity],
+            channel_USD.slug,
         )
         is None
     )
@@ -196,7 +210,10 @@ def test_check_stock_quantity_bulk(variant_with_many_stocks, channel_USD):
     variant.stocks.all().delete()
     with pytest.raises(InsufficientStock):
         check_stock_quantity_bulk(
-            [variant_with_many_stocks], country_code, [available_quantity], channel_USD.slug
+            [variant_with_many_stocks],
+            country_code,
+            [available_quantity],
+            channel_USD.slug,
         )
 
 
@@ -210,7 +227,10 @@ def test_check_stock_quantity_bulk_no_channel_shipping_zones(
 
     with pytest.raises(InsufficientStock):
         check_stock_quantity_bulk(
-            [variant_with_many_stocks], country_code, [available_quantity], channel_USD.slug
+            [variant_with_many_stocks],
+            country_code,
+            [available_quantity],
+            channel_USD.slug,
         )
 
 

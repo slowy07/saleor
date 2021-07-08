@@ -30,7 +30,11 @@ from ....payment import TransactionKind
 from ....payment.interface import GatewayResponse
 from ....plugins.manager import PluginsManager, get_plugins_manager
 from ....plugins.tests.sample_plugins import ActiveDummyPaymentGateway
-from ....product.models import ProductChannelListing, ProductVariant, ProductVariantChannelListing
+from ....product.models import (
+    ProductChannelListing,
+    ProductVariant,
+    ProductVariantChannelListing,
+)
 from ....shipping import models as shipping_models
 from ....warehouse.models import Reservation, Stock
 from ...tests.utils import (
@@ -1274,9 +1278,7 @@ def test_checkout_create_query_count_is_constant(
             cost_price_amount=Decimal(1),
             currency=channel_USD.currency_code,
         )
-        Stock.objects.create(
-            product_variant=variant, warehouse=warehouse, quantity=15
-        )
+        Stock.objects.create(product_variant=variant, warehouse=warehouse, quantity=15)
 
         variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
         lines.append({"quantity": 2, "variantId": variant_id})

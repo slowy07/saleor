@@ -117,7 +117,9 @@ def add_variant_to_checkout(
             line.delete()
             line = None
     elif line is None:
-        line = checkout.lines.create(checkout=checkout, variant=variant, quantity=new_quantity)
+        line = checkout.lines.create(
+            checkout=checkout, variant=variant, quantity=new_quantity
+        )
     elif new_quantity > 0:
         line.quantity = new_quantity
         line.save(update_fields=["quantity"])

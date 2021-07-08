@@ -435,7 +435,7 @@ def test_checkout_lines_update(
 def test_checkout_lines_update_with_new_reservations(
     mocked_update_shipping_method,
     user_api_client,
-    checkout_line_with_reservation_in_many_stocks
+    checkout_line_with_reservation_in_many_stocks,
 ):
     assert Reservation.objects.count() == 2
     checkout = checkout_line_with_reservation_in_many_stocks.checkout
@@ -726,7 +726,9 @@ MUTATION_CHECKOUT_LINES_DELETE = """
     wraps=update_checkout_shipping_method_if_invalid,
 )
 def test_checkout_line_delete(
-    mocked_update_shipping_method, user_api_client, checkout_line_with_reservation_in_many_stocks
+    mocked_update_shipping_method,
+    user_api_client,
+    checkout_line_with_reservation_in_many_stocks,
 ):
     assert Reservation.objects.count() == 2
     checkout = checkout_line_with_reservation_in_many_stocks.checkout
