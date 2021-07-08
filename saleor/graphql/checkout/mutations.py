@@ -37,6 +37,7 @@ from ...product import models as product_models
 from ...product.models import ProductChannelListing
 from ...shipping import models as shipping_models
 from ...warehouse.availability import check_stock_quantity_bulk
+from ...warehouse.reservations import reserve_stocks
 from ..account.i18n import I18nMixin
 from ..account.types import AddressInput
 from ..channel.utils import clean_channel
@@ -766,6 +767,7 @@ class CheckoutShippingAddressUpdate(BaseMutation, I18nMixin):
         quantities = [line_info.line.quantity for line_info in lines]
         current_lines = [line_info.line for line_info in lines]
         check_lines_quantity(variants, quantities, country, channel_slug, current_lines)
+        reserve_stocks(current_lines, country, channel_slug)
 
     @classmethod
     def perform_mutation(

@@ -30,7 +30,7 @@ from ....payment import TransactionKind
 from ....payment.interface import GatewayResponse
 from ....plugins.manager import PluginsManager, get_plugins_manager
 from ....plugins.tests.sample_plugins import ActiveDummyPaymentGateway
-from ....product.models import ProductChannelListing, ProductVariant
+from ....product.models import ProductChannelListing, ProductVariant, ProductVariantChannelListing
 from ....shipping import models as shipping_models
 from ....warehouse.models import Reservation, Stock
 from ...tests.utils import (
@@ -1230,6 +1230,67 @@ def test_checkout_create_available_for_purchase_from_tomorrow_product(
     assert errors[0]["field"] == "lines"
     assert errors[0]["code"] == CheckoutErrorCode.PRODUCT_UNAVAILABLE_FOR_PURCHASE.name
     assert errors[0]["variants"] == [variant_id]
+
+
+def test_checkout_create_query_count_is_constant(
+    api_client,
+    product,
+    stock,
+    warehouse,
+    graphql_address_data,
+    channel_USD,
+    django_assert_num_queries,
+):
+    variant = stock.product_variant
+    variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
+    test_email = "test@example.com"
+    shipping_address = graphql_address_data
+    quantity = 1
+    variables = {
+        "checkoutInput": {
+            "lines": [{"quantity": quantity, "variantId": variant_id}],
+            "email": test_email,
+            "shippingAddress": shipping_address,
+        }
+    }
+    with warnings.catch_warnings(record=True) as warns:
+        with django_assert_num_queries(43):
+            response = api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
+            get_graphql_content(response)["data"]["checkoutCreate"]
+            assert Checkout.objects.order_by("pk").last().lines.count() == 1
+
+    # Checkout with multiple lines has same query count as checkout with one
+    lines = []
+    for i in range(10):
+        variant = ProductVariant.objects.create(product=product, sku=f"SKU_A_{i}")
+        ProductVariantChannelListing.objects.create(
+            variant=variant,
+            channel=channel_USD,
+            price_amount=Decimal(10),
+            cost_price_amount=Decimal(1),
+            currency=channel_USD.currency_code,
+        )
+        Stock.objects.create(
+            product_variant=variant, warehouse=warehouse, quantity=15
+        )
+
+        variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
+        lines.append({"quantity": 2, "variantId": variant_id})
+
+    test_email = "test@example.com"
+    shipping_address = graphql_address_data
+    variables = {
+        "checkoutInput": {
+            "lines": lines,
+            "email": test_email,
+            "shippingAddress": shipping_address,
+        }
+    }
+    with warnings.catch_warnings(record=True) as warns:
+        with django_assert_num_queries(43):
+            response = api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
+            get_graphql_content(response)["data"]["checkoutCreate"]
+            assert Checkout.objects.order_by("pk").last().lines.count() == 10
 
 
 @pytest.fixture
