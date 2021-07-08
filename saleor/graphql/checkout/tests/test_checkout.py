@@ -1118,6 +1118,46 @@ def test_checkout_create_check_lines_quantity(
     assert data["errors"][0]["field"] == "quantity"
 
 
+def test_checkout_create_check_lines_quantity_against_reservations(
+    user_api_client,
+    stock,
+    graphql_address_data,
+    channel_USD,
+    checkout,
+):
+    variant = stock.product_variant
+    checkout_line = checkout.lines.create(
+        variant=variant,
+        quantity=3,
+    )
+    Reservation.objects.create(
+        checkout_line=checkout_line,
+        stock=stock,
+        quantity_reserved=3,
+        reserved_until=timezone.now() + datetime.timedelta(minutes=5),
+    )
+
+    variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
+    test_email = "test@example.com"
+    shipping_address = graphql_address_data
+    variables = {
+        "checkoutInput": {
+            "lines": [{"quantity": 16, "variantId": variant_id}],
+            "email": test_email,
+            "shippingAddress": shipping_address,
+            "channel": channel_USD.slug,
+        }
+    }
+    assert Checkout.objects.count() == 1
+    response = user_api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
+    content = get_graphql_content(response)
+    data = content["data"]["checkoutCreate"]
+    assert data["errors"][0]["message"] == (
+        "Could not add items SKU_A. Only 12 remaining in stock."
+    )
+    assert data["errors"][0]["field"] == "quantity"
+
+
 def test_checkout_create_unavailable_for_purchase_product(
     user_api_client, stock, graphql_address_data, channel_USD
 ):

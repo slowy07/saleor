@@ -3,9 +3,11 @@ import uuid
 from unittest import mock
 
 import graphene
+from django.utils import timezone
 
 from ....checkout.error_codes import CheckoutErrorCode
 from ....checkout.fetch import fetch_checkout_info, fetch_checkout_lines
+from ....checkout.models import Checkout
 from ....checkout.utils import calculate_checkout_quantity
 from ....plugins.manager import get_plugins_manager
 from ....product.models import ProductChannelListing
@@ -472,6 +474,64 @@ def test_checkout_lines_update_with_new_reservations(
     lines = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, [], manager)
     mocked_update_shipping_method.assert_called_once_with(checkout_info, lines)
+
+
+@mock.patch(
+    "saleor.graphql.checkout.mutations.update_checkout_shipping_method_if_invalid",
+    wraps=update_checkout_shipping_method_if_invalid,
+)
+def test_checkout_lines_update_with_reserved_stock(
+    mocked_update_shipping_method,
+    user_api_client,
+    checkout_line,
+    stock,
+    channel_USD,
+):
+    assert Reservation.objects.count() == 0
+    checkout = checkout_line.checkout
+    lines = fetch_checkout_lines(checkout)
+    assert checkout.lines.count() == 1
+    assert calculate_checkout_quantity(lines) == 3
+    variant = checkout_line.variant
+    assert checkout_line.quantity == 3
+
+    other_checkout = Checkout.objects.create(channel=channel_USD, currency="USD")
+    other_checkout_line = other_checkout.lines.create(
+        variant=variant,
+        quantity=7,
+    )
+    reservation = Reservation.objects.create(
+        checkout_line=other_checkout_line,
+        stock=variant.stocks.first(),
+        quantity_reserved=7,
+        reserved_until=timezone.now() + datetime.timedelta(minutes=5),
+    )
+
+    variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
+
+    variables = {
+        "token": checkout.token,
+        "lines": [{"variantId": variant_id, "quantity": 5}],
+    }
+    response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_UPDATE, variables)
+    content = get_graphql_content(response)
+
+    data = content["data"]["checkoutLinesUpdate"]
+    assert data["errors"]
+    assert data["errors"][0]["message"] == (
+        "Could not add items 123. Only 3 remaining in stock."
+    )
+    assert data["errors"][0]["field"] == "quantity"
+
+    checkout.refresh_from_db()
+    lines = fetch_checkout_lines(checkout)
+    assert checkout.lines.count() == 1
+    line = checkout.lines.first()
+    assert line.variant == variant
+    assert line.quantity == 3
+    assert calculate_checkout_quantity(lines) == 3
+    reservation.refresh_from_db()
+    assert Reservation.objects.count() == 1
 
 
 def test_checkout_lines_update_with_unavailable_variant(

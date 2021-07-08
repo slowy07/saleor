@@ -463,7 +463,7 @@ class CheckoutLinesAdd(BaseMutation):
         cls, checkout, variants, quantities, checkout_info, manager, discounts, replace
     ):
         channel_slug = checkout_info.channel.slug
-        existing_lines = [l.line for l in fetch_checkout_lines(checkout)]
+        existing_lines = [line_info.line for line_info in fetch_checkout_lines(checkout)]
 
         cls.validate_checkout_lines(
             variants, quantities, checkout.get_country(), channel_slug, existing_lines
@@ -764,7 +764,8 @@ class CheckoutShippingAddressUpdate(BaseMutation, I18nMixin):
             ).prefetch_related("product__product_type")
         )  # FIXME: is this prefetch needed?
         quantities = [line_info.line.quantity for line_info in lines]
-        check_lines_quantity(variants, quantities, country, channel_slug)
+        current_lines = [line_info.line for line_info in lines]
+        check_lines_quantity(variants, quantities, country, channel_slug, current_lines)
 
     @classmethod
     def perform_mutation(
