@@ -1142,7 +1142,7 @@ def test_checkout_create_check_lines_quantity_against_reservations(
     shipping_address = graphql_address_data
     variables = {
         "checkoutInput": {
-            "lines": [{"quantity": 16, "variantId": variant_id}],
+            "lines": [{"quantity": 15, "variantId": variant_id}],
             "email": test_email,
             "shippingAddress": shipping_address,
             "channel": channel_USD.slug,
@@ -1797,6 +1797,58 @@ def test_checkout_shipping_address_update_insufficient_stocks(
     shipping_address["countryArea"] = "New York"
     shipping_address["postalCode"] = "10001"
     variables = {"token": checkout.token, "shippingAddress": shipping_address}
+
+    response = user_api_client.post_graphql(
+        MUTATION_CHECKOUT_SHIPPING_ADDRESS_UPDATE, variables
+    )
+    content = get_graphql_content(response)
+    data = content["data"]["checkoutShippingAddressUpdate"]
+    errors = data["errors"]
+    assert errors[0]["code"] == CheckoutErrorCode.INSUFFICIENT_STOCK.name
+    assert errors[0]["field"] == "quantity"
+
+
+@mock.patch(
+    "saleor.graphql.checkout.mutations.update_checkout_shipping_method_if_invalid",
+    wraps=update_checkout_shipping_method_if_invalid,
+)
+@override_settings(DEFAULT_COUNTRY="DE")
+def test_checkout_shipping_address_update_against_reserved_stocks(
+    mocked_update_shipping_method,
+    channel_USD,
+    user_api_client,
+    variant_with_many_stocks_different_shipping_zones,
+    graphql_address_data,
+):
+    variant = variant_with_many_stocks_different_shipping_zones
+    checkout = Checkout.objects.create(channel=channel_USD, currency="USD")
+    checkout.set_country("PL", commit=True)
+    checkout_info = fetch_checkout_info(checkout, [], [], get_plugins_manager())
+    add_variant_to_checkout(checkout_info, variant, 2)
+    Stock.objects.filter(
+        warehouse__shipping_zones__countries__contains="US", product_variant=variant
+    ).update(quantity=2)
+    assert checkout.shipping_address is None
+
+    shipping_address = graphql_address_data
+    shipping_address["country"] = "US"
+    shipping_address["countryArea"] = "New York"
+    shipping_address["postalCode"] = "10001"
+    variables = {"token": checkout.token, "shippingAddress": shipping_address}
+
+    other_checkout = Checkout.objects.create(channel=channel_USD, currency="USD")
+    other_checkout_line = other_checkout.lines.create(
+        variant=variant,
+        quantity=3,
+    )
+    reservation = Reservation.objects.create(
+        checkout_line=other_checkout_line,
+        stock=variant.stocks.filter(
+            warehouse__shipping_zones__countries__contains="US"
+        ).first(),
+        quantity_reserved=3,
+        reserved_until=timezone.now() + datetime.timedelta(minutes=5),
+    )
 
     response = user_api_client.post_graphql(
         MUTATION_CHECKOUT_SHIPPING_ADDRESS_UPDATE, variables

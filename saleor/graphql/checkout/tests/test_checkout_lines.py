@@ -11,7 +11,7 @@ from ....checkout.models import Checkout
 from ....checkout.utils import calculate_checkout_quantity
 from ....plugins.manager import get_plugins_manager
 from ....product.models import ProductChannelListing
-from ....warehouse.models import Reservation
+from ....warehouse.models import Reservation, Stock
 from ...tests.utils import get_graphql_content
 from ..mutations import update_checkout_shipping_method_if_invalid
 
@@ -446,6 +446,10 @@ def test_checkout_lines_update_with_new_reservations(
     variant = line.variant
     assert line.quantity == 3
 
+    Stock.objects.filter(
+        warehouse__shipping_zones__countries__contains="US", product_variant=variant
+    ).update(quantity=3)
+
     variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
 
     variables = {
@@ -480,7 +484,7 @@ def test_checkout_lines_update_with_new_reservations(
     "saleor.graphql.checkout.mutations.update_checkout_shipping_method_if_invalid",
     wraps=update_checkout_shipping_method_if_invalid,
 )
-def test_checkout_lines_update_with_reserved_stock(
+def test_checkout_lines_update_against_reserved_stock(
     mocked_update_shipping_method,
     user_api_client,
     checkout_line,
