@@ -10,6 +10,7 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django_countries.fields import Country
 from measurement.measures import Weight
 from prices import Money, TaxedMoney
@@ -1689,6 +1690,70 @@ def test_checkout_customer_attach_user_to_checkout_with_user(
     variables = {"checkoutId": checkout_id, "customerId": customer_id}
     response = user_api_client.post_graphql(query, variables)
     assert_no_permission(response)
+
+
+GET_CHECKOUT_STOCK_RESERVATION_EXPIRES_QUERY = """
+query getCheckoutStockReservationExpiration($token: UUID!) {
+    checkout(token: $token) {
+        stockReservationExpires
+    }
+}
+"""
+
+
+def test_checkout_reservation_date_for_single_reservation(
+    api_client, checkout_line_with_one_reservation, address
+):
+    reservation = Reservation.objects.order_by("reserved_until").first()
+    query = GET_CHECKOUT_STOCK_RESERVATION_EXPIRES_QUERY
+    variables = {"token": checkout_line_with_one_reservation.checkout.token}
+    response = api_client.post_graphql(query, variables)
+    data = get_graphql_content(response)["data"]["checkout"]["stockReservationExpires"]
+    assert parse_datetime(data) == reservation.reserved_until
+
+
+def test_checkout_reservation_date_for_multiple_reservations(
+    api_client,
+    checkout_line_with_one_reservation,
+    checkout_line_with_reservation_in_many_stocks,
+    address,
+):
+    reservation = Reservation.objects.order_by("reserved_until").first()
+    query = GET_CHECKOUT_STOCK_RESERVATION_EXPIRES_QUERY
+    variables = {"token": checkout_line_with_one_reservation.checkout.token}
+    response = api_client.post_graphql(query, variables)
+    data = get_graphql_content(response)["data"]["checkout"]["stockReservationExpires"]
+    assert parse_datetime(data) == reservation.reserved_until
+
+
+def test_checkout_reservation_date_for_expired_reservations(
+    api_client,
+    checkout_line_with_one_reservation,
+    address,
+):
+    Reservation.objects.update(
+        reserved_until=timezone.now() - datetime.timedelta(minutes=1)
+    )
+
+    query = GET_CHECKOUT_STOCK_RESERVATION_EXPIRES_QUERY
+    variables = {"token": checkout_line_with_one_reservation.checkout.token}
+    response = api_client.post_graphql(query, variables)
+    content = get_graphql_content(response)
+    assert content["data"]["checkout"]["stockReservationExpires"] is None
+
+
+def test_checkout_reservation_date_for_no_reservations(
+    api_client,
+    checkout_line_with_one_reservation,
+    address,
+):
+    Reservation.objects.all().delete()
+
+    query = GET_CHECKOUT_STOCK_RESERVATION_EXPIRES_QUERY
+    variables = {"token": checkout_line_with_one_reservation.checkout.token}
+    response = api_client.post_graphql(query, variables)
+    content = get_graphql_content(response)
+    assert content["data"]["checkout"]["stockReservationExpires"] is None
 
 
 MUTATION_CHECKOUT_CUSTOMER_DETACH = """

@@ -1,10 +1,12 @@
 from collections import defaultdict
+from itertools import chain
 from typing import DefaultDict, Iterable, List, Optional, Tuple
 from uuid import UUID
 
 from django.conf import settings
 
-from ...warehouse.models import Stock, Warehouse
+from ...warehouse.models import Reservation, Stock, Warehouse
+from ..checkout.dataloaders import CheckoutLinesByCheckoutTokenLoader
 from ..core.dataloaders import DataLoader
 
 CountryCode = Optional[str]
@@ -179,3 +181,44 @@ class WarehouseByIdLoader(DataLoader):
     def batch_load(self, keys):
         warehouses = Warehouse.objects.in_bulk(keys)
         return [warehouses.get(UUID(warehouse_uuid)) for warehouse_uuid in keys]
+
+
+class StocksReservationsByCheckoutTokenLoader(DataLoader):
+    context_key = "stock_reservation_by_checkout_id"
+
+    def batch_load(self, keys):
+        def with_checkouts_lines(checkouts_lines):
+            checkouts_keys_map = {}
+            for i, key in enumerate(keys):
+                for checkout_line in checkouts_lines[i]:
+                    checkouts_keys_map[checkout_line.id] = key
+
+            reservations_map = defaultdict(list)
+            reservations = Reservation.objects.filter(
+                checkout_line_id__in=checkouts_keys_map.keys()
+            ).not_expired()  # type: ignore
+            for reservation in reservations:
+                checkout_key = checkouts_keys_map[reservation.checkout_line_id]
+                reservations_map[checkout_key].append(reservation)
+
+            return [reservations_map[key] for key in keys]
+
+        return (
+            CheckoutLinesByCheckoutTokenLoader(self.context)
+            .load_many(keys)
+            .then(with_checkouts_lines)
+        )
+
+
+class StocksReservationsByCheckoutLineIdLoader(DataLoader):
+    context_key = "stock_reservation_by_checkout_line_id"
+
+    def batch_load(self, keys):
+        def with_checkouts_lines(checkouts_lines):
+            return []
+
+        return (
+            StocksReservationsByCheckoutLineIdLoader(self.context)
+            .load_many(keys)
+            .then(with_reservations)
+        )
