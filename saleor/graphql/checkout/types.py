@@ -24,13 +24,13 @@ from ..product.dataloaders import (
     ProductTypeByVariantIdLoader,
     ProductVariantByIdLoader,
 )
-from ..warehouse.dataloaders import StocksReservationsByCheckoutTokenLoader
 from ..shipping.dataloaders import (
     ShippingMethodByIdLoader,
     ShippingMethodChannelListingByShippingMethodIdAndChannelSlugLoader,
 )
 from ..shipping.types import ShippingMethod
 from ..utils import get_user_or_app_from_context
+from ..warehouse.dataloaders import StocksReservationsByCheckoutTokenLoader
 from .dataloaders import (
     CheckoutByTokenLoader,
     CheckoutInfoByCheckoutTokenLoader,

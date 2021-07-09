@@ -1,5 +1,4 @@
 from collections import defaultdict
-from itertools import chain
 from typing import DefaultDict, Iterable, List, Optional, Tuple
 from uuid import UUID
 
@@ -207,18 +206,4 @@ class StocksReservationsByCheckoutTokenLoader(DataLoader):
             CheckoutLinesByCheckoutTokenLoader(self.context)
             .load_many(keys)
             .then(with_checkouts_lines)
-        )
-
-
-class StocksReservationsByCheckoutLineIdLoader(DataLoader):
-    context_key = "stock_reservation_by_checkout_line_id"
-
-    def batch_load(self, keys):
-        def with_checkouts_lines(checkouts_lines):
-            return []
-
-        return (
-            StocksReservationsByCheckoutLineIdLoader(self.context)
-            .load_many(keys)
-            .then(with_reservations)
         )
