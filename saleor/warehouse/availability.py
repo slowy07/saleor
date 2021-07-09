@@ -10,6 +10,7 @@ from .models import Reservation, Stock, StockQuerySet
 if TYPE_CHECKING:
     from ..checkout.models import CheckoutLine
     from ..product.models import Product, ProductVariant
+    from .models import ReservationQuerySet
 
 
 def _get_available_quantity(

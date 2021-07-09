@@ -44,9 +44,6 @@ def reserve_stocks(
     )
     stocks_id = (stock.pop("id") for stock in stocks)
 
-    insufficient_stock: List[InsufficientStockData] = []
-    reservations: List[Reservation] = []
-
     quantity_allocation_list = list(
         Allocation.objects.filter(
             stock_id__in=stocks_id,
