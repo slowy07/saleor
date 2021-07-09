@@ -1260,12 +1260,14 @@ def test_checkout_create_query_count_is_constant(
     with warnings.catch_warnings(record=True) as warns:
         with django_assert_num_queries(43):
             response = api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
-            get_graphql_content(response)["data"]["checkoutCreate"]
-            assert Checkout.objects.order_by("pk").last().lines.count() == 1
+            assert get_graphql_content(response)["data"]["checkoutCreate"]
+            assert Checkout.objects.first().lines.count() == 1
 
     assert any(
         [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
     )
+
+    Checkout.objects.all().delete()
 
     # Checkout with multiple lines has same query count as checkout with one
     lines = []
@@ -1295,8 +1297,8 @@ def test_checkout_create_query_count_is_constant(
     with warnings.catch_warnings(record=True) as warns:
         with django_assert_num_queries(43):
             response = api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
-            get_graphql_content(response)["data"]["checkoutCreate"]
-            assert Checkout.objects.order_by("pk").last().lines.count() == 10
+            assert get_graphql_content(response)["data"]["checkoutCreate"]
+            assert Checkout.objects.first().lines.count() == 10
 
     assert any(
         [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
