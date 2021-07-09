@@ -59,12 +59,12 @@ def reserve_stocks(
         ]
 
     quantity_reservation_list = list(
-        Reservation.objects.not_expired()
-        .exclude_checkout_lines(checkout_lines)
-        .filter(
+        Reservation.objects.filter(
             stock_id__in=stocks_id,
             quantity_reserved__gt=0,
         )
+        .not_expired()
+        .exclude_checkout_lines(checkout_lines)
         .values("stock")
         .annotate(quantity_reserved_sum=Sum("quantity_reserved"))
     )

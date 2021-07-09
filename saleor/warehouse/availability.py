@@ -131,11 +131,11 @@ def get_reserved_quantity(
     stocks: StockQuerySet, current_checkout_lines: Optional[List["CheckoutLine"]] = None
 ) -> int:
     result = (
-        Reservation.objects.not_expired()
-        .exclude_checkout_lines(current_checkout_lines)
-        .filter(
+        Reservation.objects.filter(
             stock__in=stocks,
         )
+        .not_expired()
+        .exclude_checkout_lines(current_checkout_lines)
         .aggregate(
             quantity_reserved=Coalesce(Sum("quantity_reserved"), 0),
         )
@@ -153,11 +153,11 @@ def get_reserved_quantity_bulk(
         return reservations
 
     result = (
-        Reservation.objects.not_expired()
-        .exclude_checkout_lines(current_checkout_lines)
-        .filter(
+        Reservation.objects.filter(
             stock__in=stocks,
         )
+        .not_expired()
+        .exclude_checkout_lines(current_checkout_lines)
         .values("stock_id")
         .annotate(
             quantity_reserved=Coalesce(Sum("quantity_reserved"), 0),

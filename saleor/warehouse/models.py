@@ -204,7 +204,7 @@ class Reservation(models.Model):
     quantity_reserved = models.PositiveIntegerField(default=0)
     reserved_until = models.DateTimeField()
 
-    objects = ReservationQuerySet.as_manager()
+    objects = models.Manager.from_queryset(ReservationQuerySet)()
 
     class Meta:
         unique_together = [["checkout_line", "stock"]]
