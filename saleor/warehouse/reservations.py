@@ -67,7 +67,7 @@ def reserve_stocks(
         .exclude_checkout_lines(checkout_lines)
         .values("stock")
         .annotate(quantity_reserved_sum=Sum("quantity_reserved"))
-    )
+    )  # type: ignore
     quantity_reservation_for_stocks: Dict = defaultdict(int)
     for reservation in quantity_reservation_list:
         quantity_reservation_for_stocks[allocation["stock"]] += reservation[

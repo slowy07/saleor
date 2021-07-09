@@ -139,7 +139,7 @@ def get_reserved_quantity(
         .aggregate(
             quantity_reserved=Coalesce(Sum("quantity_reserved"), 0),
         )
-    )
+    )  # type: ignore
 
     return result["quantity_reserved"]
 
@@ -162,7 +162,7 @@ def get_reserved_quantity_bulk(
         .annotate(
             quantity_reserved=Coalesce(Sum("quantity_reserved"), 0),
         )
-    )
+    )  # type: ignore
 
     stocks_variants = {stock.id: stock.product_variant_id for stock in stocks}
     for stock_reservations in result:
