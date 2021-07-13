@@ -1,10 +1,8 @@
 from collections import defaultdict, namedtuple
-from datetime import timedelta
 from typing import TYPE_CHECKING, Dict, Iterable, List, cast
 
 from django.db import transaction
 from django.db.models import Sum
-from django.utils import timezone
 
 from ..core.exceptions import InsufficientStock, InsufficientStockData
 from ..product.models import ProductVariant
