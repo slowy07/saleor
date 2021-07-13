@@ -13,9 +13,6 @@ from .models import Allocation, Reservation, Stock
 if TYPE_CHECKING:
     from ..checkout.models import CheckoutLine
 
-
-RESERVATION_TTL = timedelta(seconds=15 * 60)
-
 StockData = namedtuple("StockData", ["pk", "quantity"])
 
 
@@ -136,7 +133,6 @@ def _create_reservations(
                     checkout_line=line,
                     stock_id=stock_data.pk,
                     quantity_reserved=quantity_to_reserve,
-                    reserved_until=_get_expiration_datetime(),
                 )
             )
 
@@ -164,7 +160,3 @@ def get_checkout_lines_to_reserve(
         if line.quantity and line.variant and line.variant.track_inventory:
             valid_lines.append(line)
     return valid_lines
-
-
-def _get_expiration_datetime():
-    return timezone.now() + RESERVATION_TTL

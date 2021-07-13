@@ -18,7 +18,6 @@ from ....payment.gateways.dummy_credit_card import TOKEN_VALIDATION_MAPPING
 from ....payment.interface import GatewayResponse
 from ....plugins.manager import PluginsManager, get_plugins_manager
 from ....warehouse.models import Reservation, Stock
-from ....warehouse.reservations import _get_expiration_datetime
 from ....warehouse.tests.utils import get_available_quantity_for_stock
 from ...tests.utils import get_graphql_content
 
@@ -219,7 +218,6 @@ def test_checkout_complete(
         checkout_line=checkout_line,
         stock=checkout_line_variant.stocks.first(),
         quantity_reserved=checkout_line_quantity,
-        reserved_until=_get_expiration_datetime(),
     )
 
     manager = get_plugins_manager()

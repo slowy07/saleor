@@ -3,6 +3,8 @@
 import django.db.models.deletion
 from django.db import migrations, models
 
+import saleor.warehouse.models
+
 
 class Migration(migrations.Migration):
 
@@ -25,7 +27,12 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("quantity_reserved", models.PositiveIntegerField(default=0)),
-                ("reserved_until", models.DateTimeField()),
+                (
+                    "reserved_until",
+                    models.DateTimeField(
+                        default=saleor.warehouse.models.get_reservation_expiration
+                    ),
+                ),
                 (
                     "checkout_line",
                     models.ForeignKey(
