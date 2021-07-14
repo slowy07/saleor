@@ -6019,8 +6019,10 @@ enum WarehouseErrorCode {
 }
 
 input WarehouseFilterInput {
+  clickAndCollectOption: WarehouseClickAndCollectOptionEnum
   search: String
   ids: [ID]
+  isPrivate: Boolean
 }
 
 type WarehouseShippingZoneAssign {
