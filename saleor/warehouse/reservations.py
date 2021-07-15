@@ -78,7 +78,7 @@ def reserve_stocks(
     reservations: List[Reservation] = []
     for line in checkout_lines:
         line.variant = cast(ProductVariant, line.variant)
-        stock_reservations = variant_to_stocks[line.variant.pk]
+        stock_reservations = variant_to_stocks[line.variant_pk]
         insufficient_stock, allocation_items = _create_reservations(
             line,
             stock_reservations,
