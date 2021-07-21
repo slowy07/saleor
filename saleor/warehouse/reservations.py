@@ -5,6 +5,7 @@ from django.db import transaction
 from django.db.models import Sum
 
 from ..core.exceptions import InsufficientStock, InsufficientStockData
+from ..core.tracing import traced_atomic_transaction
 from ..product.models import ProductVariant
 from .models import Allocation, Reservation, Stock
 
