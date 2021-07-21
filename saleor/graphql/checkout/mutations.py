@@ -496,13 +496,6 @@ class CheckoutLinesAdd(BaseMutation):
                     code=exc.code,
                 )
 
-        lines = fetch_checkout_lines(checkout)
-        checkout_info.valid_shipping_methods = (
-            get_valid_shipping_method_list_for_checkout_info(
-                checkout_info, checkout_info.shipping_address, lines, discounts, manager
-            )
-        )
-
     @classmethod
     def perform_mutation(
         cls, _root, info, lines, checkout_id=None, token=None, replace=False
