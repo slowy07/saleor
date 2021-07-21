@@ -128,6 +128,7 @@ All notable, unreleased changes to this project will be documented in this file.
 - Modify order of auth middleware calls - #7572 by @tomaszszymanski129
 - Add app support for events - #7622 by @IKarbowiak
 - Reserve stocks for checkouts in progress - #7589 by @rafalp
+- Reserve stocks for checkouts - #7589 by @rafalp
 
 ### Breaking
 - Multichannel MVP: Multicurrency - #6242 by @fowczarek @d-wysocki
