@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 StockData = namedtuple("StockData", ["pk", "quantity"])
 
 
-@transaction.atomic
+@traced_atomic_transaction()
 def reserve_stocks(
     checkout_lines: Iterable["CheckoutLine"],
     country_code: str,
