@@ -3,6 +3,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
+from ...checkout.models import Checkout
 from ...core.exceptions import InsufficientStock
 from ..models import Reservation, Stock, Warehouse
 from ..reservations import reserve_stocks
@@ -18,7 +19,9 @@ def test_reserve_stocks(checkout_line, channel_USD):
     stock.quantity = 10
     stock.save(update_fields=["quantity"])
 
-    reserve_stocks([checkout_line], COUNTRY_CODE, channel_USD.slug)
+    reserve_stocks(
+        [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+    )
 
     stock.refresh_from_db()
     assert stock.quantity == 10
@@ -31,10 +34,18 @@ def test_stocks_reservation_skips_prev_stocks_delete_if_replace_is_disabled(
     checkout_line, assert_num_queries, channel_USD
 ):
     with assert_num_queries(3):
-        reserve_stocks([checkout_line], COUNTRY_CODE, channel_USD.slug, replace=False)
+        reserve_stocks(
+            [checkout_line],
+            [checkout_line.variant],
+            COUNTRY_CODE,
+            channel_USD.slug,
+            replace=False,
+        )
 
     with assert_num_queries(4):
-        reserve_stocks([checkout_line], COUNTRY_CODE, channel_USD.slug)
+        reserve_stocks(
+            [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+        )
 
 
 def test_multiple_stocks_are_reserved_if_single_stock_is_not_enough(
@@ -60,7 +71,9 @@ def test_multiple_stocks_are_reserved_if_single_stock_is_not_enough(
         warehouse=secondary_warehouse, product_variant=stock.product_variant, quantity=3
     )
 
-    reserve_stocks([checkout_line], COUNTRY_CODE, channel_USD.slug)
+    reserve_stocks(
+        [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+    )
 
     stock.refresh_from_db()
     assert stock.quantity == 3
@@ -93,7 +106,9 @@ def test_stocks_reservation_removes_previous_reservations_for_checkout(
         reserved_until=timezone.now() + timedelta(hours=1),
     )
 
-    reserve_stocks([checkout_line], COUNTRY_CODE, channel_USD.slug)
+    reserve_stocks(
+        [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+    )
 
     with pytest.raises(Reservation.DoesNotExist):
         previous_reservation.refresh_from_db()
@@ -110,7 +125,9 @@ def test_stock_reservation_fails_if_there_is_not_enough_stock_available(
     stock.save(update_fields=["quantity"])
 
     with pytest.raises(InsufficientStock):
-        reserve_stocks([checkout_line], COUNTRY_CODE, channel_USD.slug)
+        reserve_stocks(
+            [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+        )
 
 
 def test_stock_reservation_fails_if_there_is_no_stock(checkout_line, channel_USD):
@@ -120,4 +137,52 @@ def test_stock_reservation_fails_if_there_is_no_stock(checkout_line, channel_USD
     Stock.objects.all().delete()
 
     with pytest.raises(InsufficientStock):
-        reserve_stocks([checkout_line], COUNTRY_CODE, channel_USD.slug)
+        reserve_stocks(
+            [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+        )
+
+
+def test_stock_reservation_accounts_for_order_allocations(
+    order_line_with_allocation_in_many_stocks, checkout, channel_USD
+):
+    variant = order_line_with_allocation_in_many_stocks.variant
+    variant.stocks.update(quantity=3)  # 2 x 3 = 6
+
+    checkout_line = checkout.lines.create(
+        quantity=4,
+        variant=variant,
+    )
+
+    with pytest.raises(InsufficientStock):
+        reserve_stocks([checkout_line], [variant], COUNTRY_CODE, channel_USD.slug)
+
+
+def test_stock_reservation_accounts_for_order_allocations_and_reservations(
+    order_line_with_allocation_in_many_stocks, checkout, channel_USD
+):
+    variant = order_line_with_allocation_in_many_stocks.variant
+    variant.stocks.update(quantity=3)  # 2 x 3 = 6
+
+    other_checkout = Checkout.objects.create(
+        currency=channel_USD.currency_code, channel=channel_USD
+    )
+    other_checkout.set_country("US", commit=True)
+    other_checkout_line = checkout.lines.create(
+        quantity=2,
+        variant=variant,
+    )
+
+    Reservation.objects.create(
+        checkout_line=other_checkout_line,
+        stock=variant.stocks.order_by("pk").last(),
+        quantity_reserved=2,
+        reserved_until=timezone.now() + timedelta(hours=1),
+    )
+
+    checkout_line = checkout.lines.create(
+        quantity=2,
+        variant=variant,
+    )
+
+    with pytest.raises(InsufficientStock):
+        reserve_stocks([checkout_line], [variant], COUNTRY_CODE, channel_USD.slug)

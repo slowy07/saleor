@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from decimal import Decimal
 from unittest import mock
 
 import graphene
@@ -8,9 +9,13 @@ from django.utils import timezone
 from ....checkout.error_codes import CheckoutErrorCode
 from ....checkout.fetch import fetch_checkout_info, fetch_checkout_lines
 from ....checkout.models import Checkout
-from ....checkout.utils import calculate_checkout_quantity
+from ....checkout.utils import add_variants_to_checkout, calculate_checkout_quantity
 from ....plugins.manager import get_plugins_manager
-from ....product.models import ProductChannelListing
+from ....product.models import (
+    ProductChannelListing,
+    ProductVariant,
+    ProductVariantChannelListing,
+)
 from ....warehouse.models import Reservation, Stock
 from ...tests.utils import get_graphql_content
 from ..mutations import update_checkout_shipping_method_if_invalid
@@ -363,6 +368,74 @@ def test_checkout_lines_invalid_variant_id(user_api_client, checkout, stock):
     assert data["errors"][0]["field"] == "variantId"
 
 
+def test_checkout_lines_add_query_count_is_constant(
+    user_api_client,
+    channel_USD,
+    checkout_with_item,
+    product,
+    stock,
+    warehouse,
+    django_assert_num_queries,
+):
+    checkout = checkout_with_item
+    line = checkout.lines.first()
+    lines = fetch_checkout_lines(checkout)
+    assert calculate_checkout_quantity(lines) == 3
+
+    variant = ProductVariant.objects.create(product=product, sku=f"SKU_TEST")
+    ProductVariantChannelListing.objects.create(
+        variant=variant,
+        channel=channel_USD,
+        price_amount=Decimal(10),
+        cost_price_amount=Decimal(1),
+        currency=channel_USD.currency_code,
+    )
+    Stock.objects.create(product_variant=variant, warehouse=warehouse, quantity=15)
+    variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
+
+    with django_assert_num_queries(46):
+        variables = {
+            "token": checkout.token,
+            "lines": [{"quantity": 2, "variantId": variant_id}],
+            "channelSlug": checkout.channel.slug,
+        }
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_ADD, variables)
+        content = get_graphql_content(response)
+        data = content["data"]["checkoutLinesAdd"]
+        assert not data["errors"]
+
+    checkout.lines.exclude(id=line.id).delete()
+    lines = fetch_checkout_lines(checkout)
+    assert calculate_checkout_quantity(lines) == 3
+
+    # Adding multiple lines to checkout has same query count as adding one
+    new_lines = []
+    for i in range(10):
+        variant = ProductVariant.objects.create(product=product, sku=f"SKU_A_{i}")
+        ProductVariantChannelListing.objects.create(
+            variant=variant,
+            channel=channel_USD,
+            price_amount=Decimal(10),
+            cost_price_amount=Decimal(1),
+            currency=channel_USD.currency_code,
+        )
+        Stock.objects.create(product_variant=variant, warehouse=warehouse, quantity=15)
+
+        variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
+        new_lines.append({"quantity": 2, "variantId": variant_id})
+
+    with django_assert_num_queries(46):
+        variables = {
+            "token": checkout.token,
+            "lines": new_lines,
+            "channelSlug": checkout.channel.slug,
+        }
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_ADD, variables)
+        content = get_graphql_content(response)
+        data = content["data"]["checkoutLinesAdd"]
+        assert not data["errors"]
+
+
 MUTATION_CHECKOUT_LINES_UPDATE = """
     mutation checkoutLinesUpdate(
             $token: UUID, $lines: [CheckoutLineInput!]!) {
@@ -698,6 +771,71 @@ def test_checkout_lines_update_with_chosen_shipping(
     checkout.refresh_from_db()
     lines = fetch_checkout_lines(checkout)
     assert calculate_checkout_quantity(lines) == 1
+
+
+def test_checkout_lines_update_query_count_is_constant(
+    user_api_client,
+    channel_USD,
+    checkout_with_item,
+    product,
+    stock,
+    warehouse,
+    django_assert_num_queries,
+):
+    checkout = checkout_with_item
+
+    variants = []
+    for i in range(10):
+        variant = ProductVariant.objects.create(product=product, sku=f"SKU_A_{i}")
+        ProductVariantChannelListing.objects.create(
+            variant=variant,
+            channel=channel_USD,
+            price_amount=Decimal(10),
+            cost_price_amount=Decimal(1),
+            currency=channel_USD.currency_code,
+        )
+        Stock.objects.create(product_variant=variant, warehouse=warehouse, quantity=15)
+        variants.append(variant)
+
+    add_variants_to_checkout(
+        checkout,
+        variants,
+        [2] * 10,
+        channel_USD.slug,
+        replace_reservations=True,
+    )
+
+    with django_assert_num_queries(46):
+        variant_id = graphene.Node.to_global_id("ProductVariant", variants[0].pk)
+        variables = {
+            "token": checkout.token,
+            "lines": [{"quantity": 3, "variantId": variant_id}],
+        }
+        response = user_api_client.post_graphql(
+            MUTATION_CHECKOUT_LINES_UPDATE, variables
+        )
+        content = get_graphql_content(response)
+        data = content["data"]["checkoutLinesUpdate"]
+        assert not data["errors"]
+
+    # Updating multiple lines in checkout has same query count as updating one
+    with django_assert_num_queries(46):
+        variables = {
+            "token": checkout.token,
+            "lines": [],
+        }
+
+        for variant in variants:
+            variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
+            variables["lines"].append({"quantity": 4, "variantId": variant_id})
+
+        response = user_api_client.post_graphql(
+            MUTATION_CHECKOUT_LINES_UPDATE, variables
+        )
+        content = get_graphql_content(response)
+        data = content["data"]["checkoutLinesUpdate"]
+        assert not data["errors"]
+        assert not data["errors"]
 
 
 MUTATION_CHECKOUT_LINES_DELETE = """

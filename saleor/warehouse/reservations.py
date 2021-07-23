@@ -18,19 +18,22 @@ StockData = namedtuple("StockData", ["pk", "quantity"])
 @traced_atomic_transaction()
 def reserve_stocks(
     checkout_lines: Iterable["CheckoutLine"],
+    variants: Iterable["ProductVariant"],
     country_code: str,
     channel_slug: str,
     *,
     replace=True,
 ):
     """Reserve stocks for given `checkout_lines` in given country."""
+    variants_ids = [line.variant_id for line in checkout_lines]
+    variants = [variant for variant in variants if variant.pk in variants_ids]
+    variants_map = {variant.id: variant for variant in variants}
+
     # Reservation is only applied to checkout lines with variants with track inventory
     # set to True
-    checkout_lines = get_checkout_lines_to_reserve(checkout_lines)
+    checkout_lines = get_checkout_lines_to_reserve(checkout_lines, variants_map)
     if not checkout_lines:
         return
-
-    variants = [line.variant for line in checkout_lines]
 
     stocks = list(
         Stock.objects.select_for_update(of=("self",))
@@ -38,7 +41,7 @@ def reserve_stocks(
         .order_by("pk")
         .values("id", "product_variant", "pk", "quantity")
     )
-    stocks_id = (stock.pop("id") for stock in stocks)
+    stocks_id = [stock.pop("id") for stock in stocks]
 
     quantity_allocation_list = list(
         Allocation.objects.filter(
@@ -78,10 +81,10 @@ def reserve_stocks(
     insufficient_stock: List[InsufficientStockData] = []
     reservations: List[Reservation] = []
     for line in checkout_lines:
-        line.variant = cast(ProductVariant, line.variant)
         stock_reservations = variant_to_stocks[line.variant_id]
         insufficient_stock, allocation_items = _create_reservations(
             line,
+            variants_map[line.variant_id],
             stock_reservations,
             quantity_allocation_for_stocks,
             quantity_reservation_for_stocks,
@@ -90,6 +93,7 @@ def reserve_stocks(
         reservations.extend(allocation_items)
 
     if insufficient_stock:
+        print(insufficient_stock)
         raise InsufficientStock(insufficient_stock)
 
     if reservations:
@@ -100,6 +104,7 @@ def reserve_stocks(
 
 def _create_reservations(
     line: "CheckoutLine",
+    variant: "ProductVariant",
     stocks: List[StockData],
     quantity_allocation_for_stocks: dict,
     quantity_reservation_for_stocks: dict,
@@ -141,9 +146,7 @@ def _create_reservations(
 
     if not quantity_reserved == quantity:
         insufficient_stock.append(
-            InsufficientStockData(
-                variant=line.variant, checkout_line=line  # type: ignore
-            )
+            InsufficientStockData(variant=variant, checkout_line=line)  # type: ignore
         )
         return insufficient_stock, []
 
@@ -152,10 +155,15 @@ def _create_reservations(
 
 def get_checkout_lines_to_reserve(
     checkout_lines: Iterable["CheckoutLine"],
+    variants_map: Dict[int, "ProductVariant"],
 ) -> Iterable["CheckoutLine"]:
     """Return order lines which can be reserved."""
     valid_lines = []
     for line in checkout_lines:
-        if line.quantity and line.variant and line.variant.track_inventory:
+        if (
+            line.quantity
+            and line.variant_id
+            and variants_map[line.variant_id].track_inventory
+        ):
             valid_lines.append(line)
     return valid_lines

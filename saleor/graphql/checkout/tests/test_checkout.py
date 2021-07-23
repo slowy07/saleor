@@ -1259,7 +1259,7 @@ def test_checkout_create_query_count_is_constant(
         }
     }
     with warnings.catch_warnings(record=True) as warns:
-        with django_assert_num_queries(43):
+        with django_assert_num_queries(44):
             response = api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
             assert get_graphql_content(response)["data"]["checkoutCreate"]
             assert Checkout.objects.first().lines.count() == 1
@@ -1296,7 +1296,7 @@ def test_checkout_create_query_count_is_constant(
         }
     }
     with warnings.catch_warnings(record=True) as warns:
-        with django_assert_num_queries(43):
+        with django_assert_num_queries(44):
             response = api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
             assert get_graphql_content(response)["data"]["checkoutCreate"]
             assert Checkout.objects.first().lines.count() == 10

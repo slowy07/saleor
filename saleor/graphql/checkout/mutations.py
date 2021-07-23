@@ -762,7 +762,7 @@ class CheckoutShippingAddressUpdate(BaseMutation, I18nMixin):
         quantities = [line_info.line.quantity for line_info in lines]
         current_lines = [line_info.line for line_info in lines]
         check_lines_quantity(variants, quantities, country, channel_slug, current_lines)
-        reserve_stocks(current_lines, country, channel_slug)
+        reserve_stocks(current_lines, variants, country, channel_slug)
 
     @classmethod
     def perform_mutation(
