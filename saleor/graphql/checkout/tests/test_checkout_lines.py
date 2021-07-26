@@ -382,7 +382,7 @@ def test_checkout_lines_add_query_count_is_constant(
     lines = fetch_checkout_lines(checkout)
     assert calculate_checkout_quantity(lines) == 3
 
-    variant = ProductVariant.objects.create(product=product, sku=f"SKU_TEST")
+    variant = ProductVariant.objects.create(product=product, sku="SKU_TEST")
     ProductVariantChannelListing.objects.create(
         variant=variant,
         channel=channel_USD,

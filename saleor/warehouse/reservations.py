@@ -1,7 +1,6 @@
 from collections import defaultdict, namedtuple
-from typing import TYPE_CHECKING, Dict, Iterable, List, cast
+from typing import TYPE_CHECKING, Dict, Iterable, List
 
-from django.db import transaction
 from django.db.models import Sum
 
 from ..core.exceptions import InsufficientStock, InsufficientStockData

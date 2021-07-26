@@ -38,11 +38,7 @@ from ....product.models import (
 )
 from ....shipping import models as shipping_models
 from ....warehouse.models import Reservation, Stock
-from ...tests.utils import (
-    assert_no_permission,
-    get_graphql_content,
-    get_graphql_content_from_response,
-)
+from ...tests.utils import assert_no_permission, get_graphql_content
 from ..mutations import (
     clean_shipping_method,
     update_checkout_shipping_method_if_invalid,
