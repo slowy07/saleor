@@ -72,7 +72,7 @@ def reserve_stocks(
             "quantity_reserved_sum"
         ]
 
-    variant_to_stocks: Dict[str, List[StockData]] = defaultdict(list)
+    variant_to_stocks: Dict[int, List[StockData]] = defaultdict(list)
     for stock_data in stocks:
         variant = stock_data.pop("product_variant")
         variant_to_stocks[variant].append(StockData(**stock_data))
