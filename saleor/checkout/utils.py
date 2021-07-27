@@ -125,7 +125,13 @@ def add_variant_to_checkout(
         line.save(update_fields=["quantity"])
 
     if reserve_stock and line:
-        reserve_stocks([line], [variant], checkout_info.get_country(), channel_slug)
+        reserve_stocks(
+            [line],
+            [variant],
+            checkout_info.get_country(),
+            channel_slug,
+            site_settings.reserve_stock_duration_minutes,
+        )
 
     return checkout
 
