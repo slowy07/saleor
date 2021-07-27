@@ -84,12 +84,13 @@ def add_variant_to_checkout(
     quantity: int = 1,
     replace: bool = False,
     check_quantity: bool = True,
-    reserve_stock: bool = False,
 ):
     """Add a product variant to checkout.
 
     If `replace` is truthy then any previous quantity is discarded instead
     of added to.
+
+    This function is not used outside of test suite.
     """
     checkout = checkout_info.checkout
     channel_slug = checkout_info.channel.slug
@@ -123,15 +124,6 @@ def add_variant_to_checkout(
     elif new_quantity > 0:
         line.quantity = new_quantity
         line.save(update_fields=["quantity"])
-
-    if reserve_stock and line:
-        reserve_stocks(
-            [line],
-            [variant],
-            checkout_info.get_country(),
-            channel_slug,
-            site_settings.reserve_stock_duration_minutes,
-        )
 
     return checkout
 
