@@ -65,6 +65,7 @@ class SiteSettings(models.Model):
     default_mail_sender_address = models.EmailField(blank=True, null=True)
     customer_set_password_url = models.CharField(max_length=255, blank=True, null=True)
     automatically_confirm_all_new_orders = models.BooleanField(default=True)
+    reserve_stock_duration_minutes = models.IntegerField(blank=True, null=True)
     translated = TranslationProxy()
 
     class Meta:
@@ -96,6 +97,12 @@ class SiteSettings(models.Model):
         # Refer to email.header.Header and django.core.mail.message.sanitize_address.
         value = str(Address(sender_name, addr_spec=sender_address))
         return value
+
+    @property
+    def enable_stock_reservations(self) -> bool:
+        if self.reserve_stock_duration_minutes:
+            return self.reserve_stock_duration_minutes > 0
+        return False
 
 
 class SiteSettingsTranslation(models.Model):

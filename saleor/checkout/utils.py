@@ -135,6 +135,7 @@ def calculate_checkout_quantity(lines: Iterable["CheckoutLineInfo"]):
 
 
 def add_variants_to_checkout(
+    site_settings,
     checkout,
     variants,
     quantities,
@@ -153,7 +154,13 @@ def add_variants_to_checkout(
     # check quantities
     country_code = checkout.get_country()
     if not skip_stock_check:
-        check_stock_quantity_bulk(variants, country_code, quantities, channel_slug)
+        check_stock_quantity_bulk(
+            variants,
+            country_code,
+            quantities,
+            channel_slug,
+            check_reservations=site_settings.enable_stock_reservations,
+        )
 
     channel_listings = product_models.ProductChannelListing.objects.filter(
         channel_id=checkout.channel.id,
@@ -194,12 +201,13 @@ def add_variants_to_checkout(
         CheckoutLine.objects.bulk_create(to_create)
 
     to_reserve = to_create + to_update
-    if to_reserve:
+    if site_settings.enable_stock_reservations and to_reserve:
         reserve_stocks(
             to_reserve,
             variants,
             country_code,
             channel_slug,
+            site_settings.reserve_stock_duration_minutes,
             replace=replace_reservations,
         )
 

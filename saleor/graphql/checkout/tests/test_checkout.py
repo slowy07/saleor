@@ -562,6 +562,7 @@ def test_checkout_create(api_client, stock, graphql_address_data, channel_USD):
     assert new_checkout.shipping_address.postal_code == shipping_address["postalCode"]
     assert new_checkout.shipping_address.country == shipping_address["country"]
     assert new_checkout.shipping_address.city == shipping_address["city"].upper()
+    assert not Reservation.objects.exists()
 
 
 def test_checkout_create_with_invalid_channel_slug(
@@ -647,7 +648,11 @@ def test_checkout_create_multiple_warehouse(
 
 
 def test_checkout_create_with_reservation(
-    api_client, variant_with_many_stocks, graphql_address_data, channel_USD
+    site_settings_with_reservations,
+    api_client,
+    variant_with_many_stocks,
+    graphql_address_data,
+    channel_USD,
 ):
     variant = variant_with_many_stocks
     variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
@@ -1120,6 +1125,7 @@ def test_checkout_create_check_lines_quantity(
 
 
 def test_checkout_create_check_lines_quantity_against_reservations(
+    site_settings_with_reservations,
     user_api_client,
     stock,
     graphql_address_data,
@@ -1234,6 +1240,7 @@ def test_checkout_create_available_for_purchase_from_tomorrow_product(
 
 
 def test_checkout_create_query_count_is_constant(
+    site_settings_with_reservations,
     api_client,
     product,
     stock,
@@ -1949,6 +1956,7 @@ def test_checkout_shipping_address_update_insufficient_stocks(
 @override_settings(DEFAULT_COUNTRY="DE")
 def test_checkout_shipping_address_update_against_reserved_stocks(
     mocked_update_shipping_method,
+    site_settings_with_reservations,
     channel_USD,
     user_api_client,
     variant_with_many_stocks_different_shipping_zones,

@@ -9,6 +9,7 @@ from ..models import Reservation, Stock, Warehouse
 from ..reservations import reserve_stocks
 
 COUNTRY_CODE = "US"
+RESERVATION_LENGTH = 5
 
 
 def test_reserve_stocks(checkout_line, channel_USD):
@@ -20,7 +21,11 @@ def test_reserve_stocks(checkout_line, channel_USD):
     stock.save(update_fields=["quantity"])
 
     reserve_stocks(
-        [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+        [checkout_line],
+        [checkout_line.variant],
+        COUNTRY_CODE,
+        channel_USD.slug,
+        RESERVATION_LENGTH,
     )
 
     stock.refresh_from_db()
@@ -39,12 +44,17 @@ def test_stocks_reservation_skips_prev_stocks_delete_if_replace_is_disabled(
             [checkout_line.variant],
             COUNTRY_CODE,
             channel_USD.slug,
+            RESERVATION_LENGTH,
             replace=False,
         )
 
     with assert_num_queries(4):
         reserve_stocks(
-            [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+            [checkout_line],
+            [checkout_line.variant],
+            COUNTRY_CODE,
+            channel_USD.slug,
+            RESERVATION_LENGTH,
         )
 
 
@@ -72,7 +82,11 @@ def test_multiple_stocks_are_reserved_if_single_stock_is_not_enough(
     )
 
     reserve_stocks(
-        [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+        [checkout_line],
+        [checkout_line.variant],
+        COUNTRY_CODE,
+        channel_USD.slug,
+        RESERVATION_LENGTH,
     )
 
     stock.refresh_from_db()
@@ -107,7 +121,11 @@ def test_stocks_reservation_removes_previous_reservations_for_checkout(
     )
 
     reserve_stocks(
-        [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+        [checkout_line],
+        [checkout_line.variant],
+        COUNTRY_CODE,
+        channel_USD.slug,
+        RESERVATION_LENGTH,
     )
 
     with pytest.raises(Reservation.DoesNotExist):
@@ -126,7 +144,11 @@ def test_stock_reservation_fails_if_there_is_not_enough_stock_available(
 
     with pytest.raises(InsufficientStock):
         reserve_stocks(
-            [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+            [checkout_line],
+            [checkout_line.variant],
+            COUNTRY_CODE,
+            channel_USD.slug,
+            RESERVATION_LENGTH,
         )
 
 
@@ -138,7 +160,11 @@ def test_stock_reservation_fails_if_there_is_no_stock(checkout_line, channel_USD
 
     with pytest.raises(InsufficientStock):
         reserve_stocks(
-            [checkout_line], [checkout_line.variant], COUNTRY_CODE, channel_USD.slug
+            [checkout_line],
+            [checkout_line.variant],
+            COUNTRY_CODE,
+            channel_USD.slug,
+            RESERVATION_LENGTH,
         )
 
 
@@ -154,7 +180,13 @@ def test_stock_reservation_accounts_for_order_allocations(
     )
 
     with pytest.raises(InsufficientStock):
-        reserve_stocks([checkout_line], [variant], COUNTRY_CODE, channel_USD.slug)
+        reserve_stocks(
+            [checkout_line],
+            [variant],
+            COUNTRY_CODE,
+            channel_USD.slug,
+            RESERVATION_LENGTH,
+        )
 
 
 def test_stock_reservation_accounts_for_order_allocations_and_reservations(
@@ -185,4 +217,10 @@ def test_stock_reservation_accounts_for_order_allocations_and_reservations(
     )
 
     with pytest.raises(InsufficientStock):
-        reserve_stocks([checkout_line], [variant], COUNTRY_CODE, channel_USD.slug)
+        reserve_stocks(
+            [checkout_line],
+            [variant],
+            COUNTRY_CODE,
+            channel_USD.slug,
+            RESERVATION_LENGTH,
+        )

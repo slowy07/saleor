@@ -13,7 +13,9 @@ if TYPE_CHECKING:
 
 
 def _get_available_quantity(
-    stocks: StockQuerySet, checkout_lines: Optional[List["CheckoutLine"]] = None
+    stocks: StockQuerySet,
+    checkout_lines: Optional[List["CheckoutLine"]] = None,
+    check_reservations: bool = False,
 ) -> int:
     results = stocks.aggregate(
         total_quantity=Coalesce(Sum("quantity", distinct=True), 0),
@@ -21,7 +23,11 @@ def _get_available_quantity(
     )
     total_quantity = results["total_quantity"]
     quantity_allocated = results["quantity_allocated"]
-    quantity_reserved = get_reserved_quantity(stocks, checkout_lines)
+
+    if check_reservations:
+        quantity_reserved = get_reserved_quantity(stocks, checkout_lines)
+    else:
+        quantity_reserved = 0
 
     return max(total_quantity - quantity_allocated - quantity_reserved, 0)
 
@@ -32,6 +38,7 @@ def check_stock_quantity(
     channel_slug: str,
     quantity: int,
     checkout_lines: Optional[List["CheckoutLine"]] = None,
+    check_reservations: bool = False,
 ):
     """Validate if there is stock available for given variant in given country.
 
@@ -45,7 +52,10 @@ def check_stock_quantity(
         if not stocks:
             raise InsufficientStock([InsufficientStockData(variant=variant)])
 
-        if quantity > _get_available_quantity(stocks, checkout_lines):
+        available_quantity = _get_available_quantity(
+            stocks, checkout_lines, check_reservations
+        )
+        if quantity > available_quantity:
             raise InsufficientStock([InsufficientStockData(variant=variant)])
 
 
@@ -55,6 +65,7 @@ def check_stock_quantity_bulk(
     quantities: Iterable[int],
     channel_slug: str,
     current_checkout_lines: Optional[List["CheckoutLine"]] = None,
+    check_reservations: bool = False,
 ):
     """Validate if there is stock available for given variants in given country.
 
@@ -70,9 +81,12 @@ def check_stock_quantity_bulk(
     for stock in all_variants_stocks:
         variant_stocks[stock.product_variant_id].append(stock)
 
-    variant_reservations = get_reserved_quantity_bulk(
-        all_variants_stocks, current_checkout_lines
-    )
+    if check_reservations:
+        variant_reservations = get_reserved_quantity_bulk(
+            all_variants_stocks, current_checkout_lines
+        )
+    else:
+        variant_reservations = defaultdict(int)
 
     insufficient_stocks: List[InsufficientStockData] = []
     for variant, quantity in zip(variants, quantities):
@@ -107,6 +121,7 @@ def get_available_quantity(
     country_code: str,
     channel_slug: str,
     current_checkout_lines: Optional[List["CheckoutLine"]] = None,
+    check_reservations: bool = False,
 ) -> int:
     """Return available quantity for given product in given country."""
     stocks = Stock.objects.get_variant_stocks_for_country(
@@ -114,7 +129,7 @@ def get_available_quantity(
     )
     if not stocks:
         return 0
-    return _get_available_quantity(stocks, current_checkout_lines)
+    return _get_available_quantity(stocks, current_checkout_lines, check_reservations)
 
 
 def is_product_in_stock(

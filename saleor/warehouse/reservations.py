@@ -1,7 +1,9 @@
 from collections import defaultdict, namedtuple
+from datetime import timedelta
 from typing import TYPE_CHECKING, Dict, Iterable, List
 
 from django.db.models import Sum
+from django.utils import timezone
 
 from ..core.exceptions import InsufficientStock, InsufficientStockData
 from ..core.tracing import traced_atomic_transaction
@@ -20,6 +22,7 @@ def reserve_stocks(
     variants: Iterable["ProductVariant"],
     country_code: str,
     channel_slug: str,
+    length_in_minutes: int,
     *,
     replace=True,
 ):
@@ -68,7 +71,7 @@ def reserve_stocks(
     )  # type: ignore
     quantity_reservation_for_stocks: Dict = defaultdict(int)
     for reservation in quantity_reservation_list:
-        quantity_reservation_for_stocks[allocation["stock"]] += reservation[
+        quantity_reservation_for_stocks[reservation["stock"]] += reservation[
             "quantity_reserved_sum"
         ]
 
@@ -88,11 +91,11 @@ def reserve_stocks(
             quantity_allocation_for_stocks,
             quantity_reservation_for_stocks,
             insufficient_stock,
+            length_in_minutes,
         )
         reservations.extend(allocation_items)
 
     if insufficient_stock:
-        print(insufficient_stock)
         raise InsufficientStock(insufficient_stock)
 
     if reservations:
@@ -108,6 +111,7 @@ def _create_reservations(
     quantity_allocation_for_stocks: dict,
     quantity_reservation_for_stocks: dict,
     insufficient_stock: List[InsufficientStockData],
+    length_in_minutes: int,
 ):
     quantity = line.quantity
     quantity_reserved = 0
@@ -136,6 +140,10 @@ def _create_reservations(
                     checkout_line=line,
                     stock_id=stock_data.pk,
                     quantity_reserved=quantity_to_reserve,
+                    reserved_until=timezone.now()
+                    + timedelta(
+                        minutes=length_in_minutes,
+                    ),
                 )
             )
 

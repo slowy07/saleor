@@ -59,7 +59,11 @@ def test_check_stock_quantity_with_reservations(
 ):
     assert (
         check_stock_quantity(
-            variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug, 2
+            variant_with_many_stocks,
+            COUNTRY_CODE,
+            channel_USD.slug,
+            2,
+            check_reservations=True,
         )
         is None
     )
@@ -81,6 +85,7 @@ def test_check_stock_quantity_with_reservations_excluding_given_checkout_lines(
                 checkout_line_with_reservation_in_many_stocks,
                 checkout_line_with_one_reservation,
             ],
+            check_reservations=True,
         )
         is None
     )
@@ -138,7 +143,10 @@ def test_get_available_quantity_with_reservations(
     channel_USD,
 ):
     available_quantity = get_available_quantity(
-        variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug
+        variant_with_many_stocks,
+        COUNTRY_CODE,
+        channel_USD.slug,
+        check_reservations=True,
     )
     assert available_quantity == 2
 
@@ -150,7 +158,10 @@ def test_get_available_quantity_with_allocations_and_reservations(
     channel_USD,
 ):
     available_quantity = get_available_quantity(
-        variant_with_many_stocks, COUNTRY_CODE, channel_USD.slug
+        variant_with_many_stocks,
+        COUNTRY_CODE,
+        channel_USD.slug,
+        check_reservations=True,
     )
     assert available_quantity == 4
 
@@ -169,6 +180,7 @@ def test_get_available_quantity_with_reservations_excluding_given_checkout_lines
             checkout_line_with_reservation_in_many_stocks,
             checkout_line_with_one_reservation,
         ],
+        check_reservations=True,
     )
     assert available_quantity == 7
 
@@ -242,7 +254,12 @@ def test_check_stock_quantity_bulk_with_reservations(
 ):
     variant = variant_with_many_stocks
     country_code = "US"
-    available_quantity = get_available_quantity(variant, country_code, channel_USD.slug)
+    available_quantity = get_available_quantity(
+        variant,
+        country_code,
+        channel_USD.slug,
+        check_reservations=True,
+    )
 
     # test that it doesn't raise error for available quantity
     assert (
@@ -251,6 +268,7 @@ def test_check_stock_quantity_bulk_with_reservations(
             country_code,
             [available_quantity],
             channel_USD.slug,
+            check_reservations=True,
         )
         is None
     )
@@ -262,6 +280,7 @@ def test_check_stock_quantity_bulk_with_reservations(
             country_code,
             [available_quantity + 1],
             channel_USD.slug,
+            check_reservations=True,
         )
 
     # test that it passes if checkout lines are excluded
@@ -275,6 +294,7 @@ def test_check_stock_quantity_bulk_with_reservations(
                 checkout_line_with_reservation_in_many_stocks,
                 checkout_line_with_one_reservation,
             ],
+            check_reservations=True,
         )
         is None
     )

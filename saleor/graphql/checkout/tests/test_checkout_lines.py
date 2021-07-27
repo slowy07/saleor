@@ -73,16 +73,44 @@ def test_checkout_lines_add(
     assert line.variant == variant
     assert line.quantity == 1
     assert calculate_checkout_quantity(lines) == 4
-
-    reservation = line.reservations.first()
-    assert reservation
-    assert reservation.checkout_line == line
-    assert reservation.quantity_reserved == line.quantity
+    assert not Reservation.objects.exists()
 
     manager = get_plugins_manager()
     lines = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, [], manager)
     mocked_update_shipping_method.assert_called_once_with(checkout_info, lines)
+
+
+def test_checkout_lines_add_with_reservations(
+    site_settings_with_reservations, user_api_client, checkout_with_item, stock
+):
+    variant = stock.product_variant
+    checkout = checkout_with_item
+    line = checkout.lines.first()
+    lines = fetch_checkout_lines(checkout)
+    assert calculate_checkout_quantity(lines) == 3
+    variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
+
+    variables = {
+        "token": checkout.token,
+        "lines": [{"variantId": variant_id, "quantity": 1}],
+        "channelSlug": checkout.channel.slug,
+    }
+    response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_ADD, variables)
+    content = get_graphql_content(response)
+    data = content["data"]["checkoutLinesAdd"]
+    assert not data["errors"]
+    checkout.refresh_from_db()
+    lines = fetch_checkout_lines(checkout)
+    line = checkout.lines.latest("pk")
+    assert line.variant == variant
+    assert line.quantity == 1
+    assert calculate_checkout_quantity(lines) == 4
+
+    reservation = line.reservations.first()
+    assert reservation
+    assert reservation.checkout_line == line
+    assert reservation.quantity_reserved == line.quantity
 
 
 def test_checkout_lines_add_existing_variant(user_api_client, checkout_with_item):
@@ -369,6 +397,7 @@ def test_checkout_lines_invalid_variant_id(user_api_client, checkout, stock):
 
 
 def test_checkout_lines_add_query_count_is_constant(
+    site_settings_with_reservations,
     user_api_client,
     channel_USD,
     checkout_with_item,
@@ -393,7 +422,7 @@ def test_checkout_lines_add_query_count_is_constant(
     Stock.objects.create(product_variant=variant, warehouse=warehouse, quantity=15)
     variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
 
-    with django_assert_num_queries(46):
+    with django_assert_num_queries(48):
         variables = {
             "token": checkout.token,
             "lines": [{"quantity": 2, "variantId": variant_id}],
@@ -424,7 +453,7 @@ def test_checkout_lines_add_query_count_is_constant(
         variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
         new_lines.append({"quantity": 2, "variantId": variant_id})
 
-    with django_assert_num_queries(46):
+    with django_assert_num_queries(48):
         variables = {
             "token": checkout.token,
             "lines": new_lines,
@@ -501,12 +530,8 @@ def test_checkout_lines_update(
     mocked_update_shipping_method.assert_called_once_with(checkout_info, lines)
 
 
-@mock.patch(
-    "saleor.graphql.checkout.mutations.update_checkout_shipping_method_if_invalid",
-    wraps=update_checkout_shipping_method_if_invalid,
-)
 def test_checkout_lines_update_with_new_reservations(
-    mocked_update_shipping_method,
+    site_settings_with_reservations,
     user_api_client,
     checkout_line_with_reservation_in_many_stocks,
 ):
@@ -547,18 +572,9 @@ def test_checkout_lines_update_with_new_reservations(
 
     assert Reservation.objects.count() == 1
 
-    manager = get_plugins_manager()
-    lines = fetch_checkout_lines(checkout)
-    checkout_info = fetch_checkout_info(checkout, lines, [], manager)
-    mocked_update_shipping_method.assert_called_once_with(checkout_info, lines)
 
-
-@mock.patch(
-    "saleor.graphql.checkout.mutations.update_checkout_shipping_method_if_invalid",
-    wraps=update_checkout_shipping_method_if_invalid,
-)
 def test_checkout_lines_update_against_reserved_stock(
-    mocked_update_shipping_method,
+    site_settings_with_reservations,
     user_api_client,
     checkout_line,
     stock,
@@ -774,6 +790,7 @@ def test_checkout_lines_update_with_chosen_shipping(
 
 
 def test_checkout_lines_update_query_count_is_constant(
+    site_settings_with_reservations,
     user_api_client,
     channel_USD,
     checkout_with_item,
@@ -798,6 +815,7 @@ def test_checkout_lines_update_query_count_is_constant(
         variants.append(variant)
 
     add_variants_to_checkout(
+        site_settings_with_reservations,
         checkout,
         variants,
         [2] * 10,
@@ -805,7 +823,7 @@ def test_checkout_lines_update_query_count_is_constant(
         replace_reservations=True,
     )
 
-    with django_assert_num_queries(46):
+    with django_assert_num_queries(48):
         variant_id = graphene.Node.to_global_id("ProductVariant", variants[0].pk)
         variables = {
             "token": checkout.token,
@@ -819,7 +837,7 @@ def test_checkout_lines_update_query_count_is_constant(
         assert not data["errors"]
 
     # Updating multiple lines in checkout has same query count as updating one
-    with django_assert_num_queries(46):
+    with django_assert_num_queries(48):
         variables = {
             "token": checkout.token,
             "lines": [],
@@ -834,7 +852,6 @@ def test_checkout_lines_update_query_count_is_constant(
         )
         content = get_graphql_content(response)
         data = content["data"]["checkoutLinesUpdate"]
-        assert not data["errors"]
         assert not data["errors"]
 
 

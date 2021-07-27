@@ -1,9 +1,11 @@
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import ANY, patch
 
 import graphene
 import pytest
+from django.utils import timezone
 
 from ....checkout import calculations
 from ....checkout.error_codes import CheckoutErrorCode
@@ -218,6 +220,7 @@ def test_checkout_complete(
         checkout_line=checkout_line,
         stock=checkout_line_variant.stocks.first(),
         quantity_reserved=checkout_line_quantity,
+        reserved_until=timezone.now() + timedelta(minutes=5),
     )
 
     manager = get_plugins_manager()
