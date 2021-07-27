@@ -4184,7 +4184,7 @@ def delivery_method(request, warehouse_for_cc, shipping_method):
 
 
 @pytest.fixture
-def stocks_for_cc(warehouses_for_cc, product_variant_list):
+def stocks_for_cc(warehouses_for_cc, product_variant_list, product_with_two_variants):
     return Stock.objects.bulk_create(
         [
             Stock(
@@ -4221,6 +4221,11 @@ def stocks_for_cc(warehouses_for_cc, product_variant_list):
                 warehouse=warehouses_for_cc[3],
                 product_variant=product_variant_list[1],
                 quantity=3,
+            ),
+            Stock(
+                warehouse=warehouses_for_cc[3],
+                product_variant=product_with_two_variants.variants.last(),
+                quantity=7,
             ),
             Stock(
                 warehouse=warehouses_for_cc[3],
