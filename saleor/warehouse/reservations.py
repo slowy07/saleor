@@ -1,6 +1,6 @@
 from collections import defaultdict, namedtuple
 from datetime import timedelta
-from typing import TYPE_CHECKING, Dict, Iterable, List
+from typing import TYPE_CHECKING, Dict, Iterable, List, Tuple
 
 from django.db.models import Sum
 from django.utils import timezone
@@ -112,7 +112,7 @@ def _create_reservations(
     quantity_reservation_for_stocks: dict,
     insufficient_stock: List[InsufficientStockData],
     length_in_minutes: int,
-):
+) -> Tuple[List[InsufficientStockData], List[Reservation]]:
     quantity = line.quantity
     quantity_reserved = 0
     reservations = []
