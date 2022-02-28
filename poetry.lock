@@ -2535,7 +2535,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-requests"
-version = "2.27.8"
+version = "2.27.11"
 description = "Typing stubs for requests"
 category = "dev"
 optional = false
@@ -2765,7 +2765,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.9"
-content-hash = "014e9770ae62aa524663f5c36e0890d7c031588d10aeb4b19d38e1f007a70323"
+content-hash = "649276f1fe1d12771b14ea52b983d9d17853634569da2c319e56bc17c1e6ef20"
 
 [metadata.files]
 adyen = [
@@ -4324,8 +4324,8 @@ types-pytz = [
     {file = "types_pytz-2021.3.4-py3-none-any.whl", hash = "sha256:ccfa2ed29f816e3de2f882541c06ad2791f808a79cfe38265411820190999f0f"},
 ]
 types-requests = [
-    {file = "types-requests-2.27.8.tar.gz", hash = "sha256:c2f4e4754d07ca0a88fd8a89bbc6c8a9f90fb441f9c9b572fd5c484f04817486"},
-    {file = "types_requests-2.27.8-py3-none-any.whl", hash = "sha256:8ec9f5f84adc6f579f53943312c28a84e87dc70201b54f7c4fbc7d22ecfa8a3e"},
+    {file = "types-requests-2.27.11.tar.gz", hash = "sha256:6a7ed24b21780af4a5b5e24c310b2cd885fb612df5fd95584d03d87e5f2a195a"},
+    {file = "types_requests-2.27.11-py3-none-any.whl", hash = "sha256:506279bad570c7b4b19ac1f22e50146538befbe0c133b2cea66a9b04a533a859"},
 ]
 types-urllib3 = [
     {file = "types-urllib3-1.26.9.tar.gz", hash = "sha256:abd2d4857837482b1834b4817f0587678dcc531dbc9abe4cde4da28cef3f522c"},
