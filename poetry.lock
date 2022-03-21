@@ -846,7 +846,7 @@ pyflakes = ">=2.3.0,<2.4.0"
 
 [[package]]
 name = "fonttools"
-version = "4.29.1"
+version = "4.31.1"
 description = "Tools to manipulate font files"
 category = "main"
 optional = false
@@ -2535,7 +2535,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-requests"
-version = "2.27.8"
+version = "2.27.14"
 description = "Typing stubs for requests"
 category = "dev"
 optional = false
@@ -2765,7 +2765,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.9"
-content-hash = "014e9770ae62aa524663f5c36e0890d7c031588d10aeb4b19d38e1f007a70323"
+content-hash = "35ef26a85d85ce3e3bb28f33e96fbaf7949ead2bc7dbd4d3f6a5fe0b6a2e2260"
 
 [metadata.files]
 adyen = [
@@ -3228,8 +3228,8 @@ flake8 = [
     {file = "flake8-3.9.2.tar.gz", hash = "sha256:07528381786f2a6237b061f6e96610a4167b226cb926e2aa2b6b1d78057c576b"},
 ]
 fonttools = [
-    {file = "fonttools-4.29.1-py3-none-any.whl", hash = "sha256:1933415e0fbdf068815cb1baaa1f159e17830215f7e8624e5731122761627557"},
-    {file = "fonttools-4.29.1.zip", hash = "sha256:2b18a172120e32128a80efee04cff487d5d140fe7d817deb648b2eee023a40e4"},
+    {file = "fonttools-4.31.1-py3-none-any.whl", hash = "sha256:2b288eae806800668cb5cdf52a37b5ac701c5adda2dd5c88b685581ce3385285"},
+    {file = "fonttools-4.31.1.zip", hash = "sha256:f8b35ed9ba189710994cec2c86b8eb5f0c49336698575e439a0d5671d3ca1ace"},
 ]
 freezegun = [
     {file = "freezegun-1.1.0-py2.py3-none-any.whl", hash = "sha256:2ae695f7eb96c62529f03a038461afe3c692db3465e215355e1bb4b0ab408712"},
@@ -4324,8 +4324,8 @@ types-pytz = [
     {file = "types_pytz-2021.3.4-py3-none-any.whl", hash = "sha256:ccfa2ed29f816e3de2f882541c06ad2791f808a79cfe38265411820190999f0f"},
 ]
 types-requests = [
-    {file = "types-requests-2.27.8.tar.gz", hash = "sha256:c2f4e4754d07ca0a88fd8a89bbc6c8a9f90fb441f9c9b572fd5c484f04817486"},
-    {file = "types_requests-2.27.8-py3-none-any.whl", hash = "sha256:8ec9f5f84adc6f579f53943312c28a84e87dc70201b54f7c4fbc7d22ecfa8a3e"},
+    {file = "types-requests-2.27.14.tar.gz", hash = "sha256:04579ee164f7c2659be46950e3c2f8d51a081ad252ef1b01d4b12faba5c3810b"},
+    {file = "types_requests-2.27.14-py3-none-any.whl", hash = "sha256:c01838abfe3e8a83ba68346cd373afff97594c19c15c922ddee4a0e80ba7e329"},
 ]
 types-urllib3 = [
     {file = "types-urllib3-1.26.9.tar.gz", hash = "sha256:abd2d4857837482b1834b4817f0587678dcc531dbc9abe4cde4da28cef3f522c"},
